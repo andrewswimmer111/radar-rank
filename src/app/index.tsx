@@ -1,9 +1,12 @@
-import { Text, View, StyleSheet } from "react-native";
+import { StyleSheet, Text, View } from 'react-native';
+
+import { colors, type } from '@/design/tokens';
 
 export default function Index() {
   return (
     <View style={styles.container}>
-      <Text>Edit src/app/index.tsx to edit this screen.</Text>
+      <Text style={styles.title}>RadarRank</Text>
+      <Text style={styles.subtitle}>boot ok — fonts loaded</Text>
     </View>
   );
 }
@@ -11,7 +14,10 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  title: { ...type.hero, color: colors.text },
+  subtitle: { ...type.body, color: colors.textDim, marginTop: 8 },
 });

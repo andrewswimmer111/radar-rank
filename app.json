@@ -28,11 +28,20 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#0B0B10",
           "android": {
             "image": "./assets/images/splash-icon.png",
             "imageWidth": 76
           }
+        }
+      ],
+      "expo-sharing",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow RadarRank to access your photos.",
+          "savePhotosPermission": "Allow RadarRank to save your generated cards to Photos.",
+          "isAccessMediaLocationEnabled": false
         }
       ]
     ],

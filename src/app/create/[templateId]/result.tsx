@@ -16,15 +16,14 @@ import {
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AspectToggle, type AspectRatio } from '@/components/AspectToggle';
 import { HeaderBar } from '@/components/HeaderBar';
 import { RadarCard } from '@/components/RadarCard';
 import { getTemplate } from '@/data/templates';
 import { colors, radii, shadows, spacing, type } from '@/design/tokens';
 import { exportFilename, snapshotCanvasToFile } from '@/lib/exportCard';
+import { gradeFromScore, overallScore, topTrait } from '@/lib/stats';
 import { useDraft } from '@/state/DraftProvider';
 
-const ASPECT_RATIO: Record<AspectRatio, number> = { square: 1, story: 16 / 9 };
 const EXPORT_WIDTH = 1080;
 
 export default function ResultScreen() {
@@ -32,7 +31,6 @@ export default function ResultScreen() {
   const { draft } = useDraft();
   const insets = useSafeAreaInsets();
   const { width: SCREEN_W, height: SCREEN_H } = useWindowDimensions();
-  const [aspect, setAspect] = useState<AspectRatio>('square');
   const [busy, setBusy] = useState<'save' | 'share' | null>(null);
   const exportRef = useCanvasRef();
 
@@ -49,14 +47,6 @@ export default function ResultScreen() {
     );
   }
 
-  const reservedV = 248 + insets.top + insets.bottom;
-  const availW = SCREEN_W - spacing.xl * 2;
-  const availH = SCREEN_H - reservedV;
-  const ratio = ASPECT_RATIO[aspect];
-  const cardW = Math.min(availW, availH / ratio);
-  const cardH = cardW * ratio;
-  const exportH = EXPORT_WIDTH * ratio;
-
   const onEdit = () => {
     Haptics.selectionAsync().catch(() => {});
     router.push({
@@ -65,8 +55,19 @@ export default function ResultScreen() {
     });
   };
 
+  // Single canonical square card. Sized to dominate the viewport while
+  // leaving room for header, metadata, and the action row.
+  const reservedV = 220 + insets.top + insets.bottom;
+  const availW = SCREEN_W - spacing.xl * 2;
+  const availH = SCREEN_H - reservedV;
+  const cardSize = Math.min(availW, availH);
+
+  const overall = overallScore(template, draft.scores);
+  const grade = gradeFromScore(overall);
+  const top = topTrait(template, draft.scores);
+
   const writeExportFile = async () => {
-    return snapshotCanvasToFile(exportRef, exportFilename(template.id, aspect));
+    return snapshotCanvasToFile(exportRef, exportFilename(template.id));
   };
 
   const onSave = async () => {
@@ -106,20 +107,41 @@ export default function ResultScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <HeaderBar title={template.label} />
-      <Animated.View
-        key={aspect}
-        entering={FadeIn.duration(380)}
-        style={styles.previewArea}>
-        <View style={[styles.cardShadow, { width: cardW, height: cardH }]}>
+      <HeaderBar
+        title={template.label}
+        right={
+          <Pressable
+            onPress={onEdit}
+            hitSlop={10}
+            style={({ pressed }) => [styles.editLink, pressed && styles.pressed]}>
+            <Text style={styles.editLinkText}>Edit</Text>
+          </Pressable>
+        }
+      />
+
+      <Animated.View entering={FadeIn.duration(420)} style={styles.previewArea}>
+        <View style={[styles.cardShadow, { width: cardSize, height: cardSize }]}>
           <RadarCard
             template={template}
             draft={draft}
-            width={cardW}
-            height={cardH}
-            aspect={aspect}
+            width={cardSize}
+            height={cardSize}
           />
         </View>
+
+        <Animated.View
+          entering={FadeInDown.duration(420).delay(220)}
+          style={styles.metaRow}>
+          <View style={styles.metaChip}>
+            <Text style={styles.metaLabel}>OVR</Text>
+            <Text style={styles.metaValue}>{overall}</Text>
+            <View style={styles.metaDivider} />
+            <Text style={styles.metaGrade}>{grade}</Text>
+          </View>
+          <Text style={styles.metaCaption} numberOfLines={1}>
+            Top trait · {top.label}
+          </Text>
+        </Animated.View>
       </Animated.View>
 
       {/* Offscreen export-resolution card; ref is snapshotted on demand. */}
@@ -128,8 +150,7 @@ export default function ResultScreen() {
           template={template}
           draft={draft}
           width={EXPORT_WIDTH}
-          height={exportH}
-          aspect={aspect}
+          height={EXPORT_WIDTH}
           canvasRef={exportRef}
         />
       </View>
@@ -137,46 +158,34 @@ export default function ResultScreen() {
       <Animated.View
         entering={FadeInDown.duration(420).delay(140)}
         style={[styles.controls, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <AspectToggle value={aspect} onChange={setAspect} />
-
-        <View style={styles.actionRow}>
-          <Pressable
-            onPress={onEdit}
-            style={({ pressed }) => [
-              styles.actionGhost,
-              pressed && styles.pressed,
-            ]}>
-            <Text style={styles.actionGhostText}>Edit</Text>
-          </Pressable>
-          <Pressable
-            onPress={onSave}
-            disabled={!!busy}
-            style={({ pressed }) => [
-              styles.actionGhost,
-              pressed && styles.pressed,
-              !!busy && styles.actionBusy,
-            ]}>
-            {busy === 'save' ? (
-              <ActivityIndicator color={colors.text} size="small" />
-            ) : (
-              <Text style={styles.actionGhostText}>Save</Text>
-            )}
-          </Pressable>
-          <Pressable
-            onPress={onShare}
-            disabled={!!busy}
-            style={({ pressed }) => [
-              styles.actionPrimary,
-              pressed && styles.pressed,
-              !!busy && styles.actionBusy,
-            ]}>
-            {busy === 'share' ? (
-              <ActivityIndicator color={colors.bg} size="small" />
-            ) : (
-              <Text style={styles.actionPrimaryText}>Share</Text>
-            )}
-          </Pressable>
-        </View>
+        <Pressable
+          onPress={onSave}
+          disabled={!!busy}
+          style={({ pressed }) => [
+            styles.actionGhost,
+            pressed && styles.pressed,
+            !!busy && styles.actionBusy,
+          ]}>
+          {busy === 'save' ? (
+            <ActivityIndicator color={colors.text} size="small" />
+          ) : (
+            <Text style={styles.actionGhostText}>Save</Text>
+          )}
+        </Pressable>
+        <Pressable
+          onPress={onShare}
+          disabled={!!busy}
+          style={({ pressed }) => [
+            styles.actionPrimary,
+            pressed && styles.pressed,
+            !!busy && styles.actionBusy,
+          ]}>
+          {busy === 'share' ? (
+            <ActivityIndicator color={colors.bg} size="small" />
+          ) : (
+            <Text style={styles.actionPrimaryText}>Share</Text>
+          )}
+        </Pressable>
       </Animated.View>
     </SafeAreaView>
   );
@@ -196,10 +205,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
+    gap: spacing.lg,
   },
   cardShadow: {
     ...shadows.card,
     borderRadius: radii.xl,
+  },
+  metaRow: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    backgroundColor: colors.bgElev,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  metaLabel: { ...type.eyebrow, color: colors.textMute },
+  metaValue: { ...type.h2, color: colors.text },
+  metaGrade: { ...type.h3, color: colors.accent, letterSpacing: 0 },
+  metaDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 16,
+    backgroundColor: colors.border,
+  },
+  metaCaption: {
+    ...type.caption,
+    color: colors.textMute,
+    letterSpacing: 0.6,
   },
   offscreen: {
     position: 'absolute',
@@ -208,37 +246,34 @@ const styles = StyleSheet.create({
     opacity: 0,
   },
   controls: {
+    flexDirection: 'row',
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
-    gap: spacing.md,
-  },
-  actionRow: {
-    flexDirection: 'row',
     gap: spacing.sm,
   },
   actionGhost: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 11,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.bgElev,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    minHeight: 48,
+    minHeight: 46,
   },
   actionGhostText: {
     ...type.h3,
     color: colors.text,
   },
   actionPrimary: {
-    flex: 1.2,
-    paddingVertical: 12,
+    flex: 1.4,
+    paddingVertical: 11,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.accent,
-    minHeight: 48,
+    minHeight: 46,
   },
   actionPrimaryText: {
     ...type.h3,
@@ -246,4 +281,12 @@ const styles = StyleSheet.create({
   },
   actionBusy: { opacity: 0.7 },
   pressed: { transform: [{ scale: 0.97 }], opacity: 0.92 },
+  editLink: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  editLinkText: {
+    ...type.label,
+    color: colors.textDim,
+  },
 });

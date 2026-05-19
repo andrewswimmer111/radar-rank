@@ -22,7 +22,7 @@ export async function snapshotCanvasToFile(
   return file.uri;
 }
 
-export function exportFilename(templateId: string, aspect: string): string {
+export function exportFilename(templateId: string): string {
   const ts = Date.now();
-  return `radarrank-${templateId}-${aspect}-${ts}.png`;
+  return `radarrank-${templateId}-${ts}.png`;
 }

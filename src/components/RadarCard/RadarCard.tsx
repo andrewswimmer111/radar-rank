@@ -9,7 +9,6 @@ import {
   Path,
   RadialGradient,
   Rect,
-  RoundedRect,
   Skia,
   Text as SkText,
   useFont,
@@ -20,7 +19,7 @@ import { View } from 'react-native';
 import { Easing, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import type { Template } from '@/data/types';
-import { lowestTrait, overallScore, topTrait } from '@/lib/stats';
+import { profileArchetype } from '@/lib/stats';
 
 import {
   axisAngle,
@@ -33,8 +32,7 @@ import {
 } from './geometry';
 
 const LOGICAL_W = 1080;
-
-export type CardAspect = 'square' | 'story';
+const LOGICAL_H = 1080;
 
 type Draft = { name: string; scores: Record<string, number> };
 
@@ -43,94 +41,47 @@ export type RadarCardProps = {
   draft: Draft;
   width: number;
   height: number;
-  aspect?: CardAspect;
   canvasRef?: RefObject<CanvasRef | null>;
 };
 
-type FontSizes = {
-  name: number;
-  eyebrow: number;
-  axis: number;
-  vertex: number;
-  metricBig: number;
-  metricLabel: number;
-  footer: number;
-};
-
-function fontSizesFor(aspect: CardAspect): FontSizes {
-  if (aspect === 'story') {
-    return {
-      name: 96,
-      eyebrow: 26,
-      axis: 26,
-      vertex: 22,
-      metricBig: 132,
-      metricLabel: 22,
-      footer: 22,
-    };
-  }
-  return {
-    name: 72,
-    eyebrow: 22,
-    axis: 24,
-    vertex: 20,
-    metricBig: 80,
-    metricLabel: 20,
-    footer: 22,
-  };
-}
+const SIZES = {
+  name: 80,
+  eyebrow: 22,
+  axis: 24,
+  vertex: 20,
+  footer: 16,
+} as const;
 
 export function RadarCard({
   template,
   draft,
   width,
   height,
-  aspect = 'square',
   canvasRef,
 }: RadarCardProps) {
-  const sizes = fontSizesFor(aspect);
-
   const heroFont = useFont(
     require('@expo-google-fonts/bricolage-grotesque/800ExtraBold/BricolageGrotesque_800ExtraBold.ttf'),
-    sizes.name,
-  );
-  const metricFont = useFont(
-    require('@expo-google-fonts/bricolage-grotesque/800ExtraBold/BricolageGrotesque_800ExtraBold.ttf'),
-    sizes.metricBig,
-  );
-  const traitFont = useFont(
-    require('@expo-google-fonts/bricolage-grotesque/700Bold/BricolageGrotesque_700Bold.ttf'),
-    sizes.axis + 6,
+    SIZES.name,
   );
   const axisFont = useFont(
     require('@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf'),
-    sizes.axis,
-  );
-  const vertexFont = useFont(
-    require('@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf'),
-    sizes.vertex,
+    SIZES.axis,
   );
   const eyebrowFont = useFont(
     require('@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf'),
-    sizes.eyebrow,
+    SIZES.eyebrow,
   );
   const footerFont = useFont(
     require('@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf'),
-    sizes.footer,
+    SIZES.footer,
   );
 
   const scale = width / LOGICAL_W;
-  const logicalH = height / scale;
 
-  const layout = useMemo(
-    () => computeLayout(aspect, logicalH, sizes),
-    [aspect, logicalH, sizes],
-  );
+  const layout = useMemo(() => computeLayout(), []);
 
-  const fontsReady =
-    heroFont && metricFont && traitFont && axisFont && vertexFont && eyebrowFont && footerFont;
+  const fontsReady = heroFont && axisFont && eyebrowFont && footerFont;
 
-  // Animate chart opacity from 0 → 1 on mount. Export canvas (canvasRef present) starts at 1.
   const chartOpacity = useSharedValue(canvasRef ? 1 : 0);
   useEffect(() => {
     if (!canvasRef) {
@@ -177,9 +128,7 @@ export function RadarCard({
 
   const upperName = (draft.name || ' ').toUpperCase();
   const eyebrowText = template.label.toUpperCase();
-  const overall = overallScore(template, draft.scores);
-  const top = topTrait(template, draft.scores);
-  const low = lowestTrait(template, draft.scores);
+  const archetype = profileArchetype(template, draft.scores).toUpperCase();
 
   return (
     <View
@@ -187,25 +136,25 @@ export function RadarCard({
         width,
         height,
         overflow: 'hidden',
-        borderRadius: width * 0.045,
+        borderRadius: width * 0.05,
         backgroundColor: '#0B0B12',
       }}>
       <Canvas style={{ width, height }} ref={canvasRef}>
         <Group transform={[{ scale }]}>
           {/* Base linear gradient — keeps the template's color identity */}
-          <Rect x={0} y={0} width={LOGICAL_W} height={logicalH}>
+          <Rect x={0} y={0} width={LOGICAL_W} height={LOGICAL_H}>
             <LinearGradient
               start={vec(0, 0)}
-              end={vec(LOGICAL_W, logicalH)}
+              end={vec(LOGICAL_W, LOGICAL_H)}
               colors={[template.accent.start, template.accent.end]}
             />
           </Rect>
 
-          {/* Soft radial highlight near the chart — adds depth */}
-          <Rect x={0} y={0} width={LOGICAL_W} height={logicalH}>
+          {/* Soft radial highlight near the chart — depth */}
+          <Rect x={0} y={0} width={LOGICAL_W} height={LOGICAL_H}>
             <RadialGradient
               c={vec(LOGICAL_W * 0.5, layout.center.y)}
-              r={LOGICAL_W * 0.75}
+              r={LOGICAL_W * 0.78}
               colors={[
                 withAlpha(template.accent.glow, 0.55),
                 withAlpha(template.accent.glow, 0.18),
@@ -215,22 +164,51 @@ export function RadarCard({
             />
           </Rect>
 
+          {/* Top highlight — gives the card a subtle "sheen" */}
+          <Rect x={0} y={0} width={LOGICAL_W} height={LOGICAL_H * 0.45}>
+            <LinearGradient
+              start={vec(0, 0)}
+              end={vec(0, LOGICAL_H * 0.45)}
+              colors={['rgba(255,255,255,0.10)', 'rgba(255,255,255,0)']}
+            />
+          </Rect>
+
           {/* Dark vignette toward edges — premium poster feel */}
-          <Rect x={0} y={0} width={LOGICAL_W} height={logicalH}>
+          <Rect x={0} y={0} width={LOGICAL_W} height={LOGICAL_H}>
             <RadialGradient
-              c={vec(LOGICAL_W * 0.5, logicalH * 0.55)}
+              c={vec(LOGICAL_W * 0.5, LOGICAL_H * 0.55)}
               r={LOGICAL_W * 0.95}
-              colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0.55)']}
+              colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.18)', 'rgba(0,0,0,0.58)']}
               positions={[0.45, 0.78, 1]}
             />
           </Rect>
 
           {/* Subtle film grain */}
           <Group opacity={0.06}>
-            <Rect x={0} y={0} width={LOGICAL_W} height={logicalH}>
+            <Rect x={0} y={0} width={LOGICAL_W} height={LOGICAL_H}>
               <FractalNoise freqX={0.65} freqY={0.65} octaves={2} seed={11} />
             </Rect>
           </Group>
+
+          {/* Inner frame — collectible card border */}
+          <Rect
+            x={layout.frameInset}
+            y={layout.frameInset}
+            width={LOGICAL_W - layout.frameInset * 2}
+            height={LOGICAL_H - layout.frameInset * 2}
+            color="rgba(255,255,255,0.08)"
+            style="stroke"
+            strokeWidth={1}
+          />
+
+          {/* Header zone: eyebrow + name */}
+          <HeaderZone
+            eyebrowText={eyebrowText}
+            nameText={upperName}
+            heroFont={heroFont}
+            eyebrowFont={eyebrowFont}
+            layout={layout}
+          />
 
           {/* Chart group — fades in after card entrance */}
           <Group opacity={chartOpacity}>
@@ -302,7 +280,7 @@ export function RadarCard({
               const anchor = labelAnchor(layout.center, layout.radarRadius, a, 22);
               const label = cat.label.toUpperCase();
               const tw = axisFont.measureText(label).width;
-              const { x, y } = labelOffset(anchor, a, tw, sizes.axis * 0.7);
+              const { x, y } = labelOffset(anchor, a, tw, SIZES.axis * 0.7);
               return (
                 <SkText
                   key={cat.key}
@@ -316,39 +294,12 @@ export function RadarCard({
             })}
           </Group>
 
-          {/* Header zone: eyebrow + name */}
-          <HeaderZone
-            aspect={aspect}
-            eyebrowText={eyebrowText}
-            nameText={upperName}
-            heroFont={heroFont}
-            eyebrowFont={eyebrowFont}
+          {/* Footer brand — archetype · RADARRANK */}
+          <FooterBrand
             layout={layout}
+            footerFont={footerFont}
+            archetypeText={archetype}
           />
-
-          {/* Stat zone — branches on aspect */}
-          {aspect === 'square' ? (
-            <SquareStatStrip
-              layout={layout}
-              eyebrowFont={eyebrowFont}
-              traitFont={traitFont}
-              top={top}
-              low={low}
-              overall={overall}
-            />
-          ) : (
-            <StoryStatStack
-              layout={layout}
-              eyebrowFont={eyebrowFont}
-              traitFont={traitFont}
-              vertexFont={vertexFont}
-              metricFont={metricFont}
-              top={top}
-              low={low}
-              overall={overall}
-            />
-          )}
-
         </Group>
       </Canvas>
     </View>
@@ -357,90 +308,59 @@ export function RadarCard({
 
 type Layout = {
   pad: number;
+  frameInset: number;
   headerEyebrowY: number;
   headerNameY: number;
   center: Point;
   radarRadius: number;
-  statTop: number;
   footerY: number;
-  logicalH: number;
 };
 
-function computeLayout(aspect: CardAspect, logicalH: number, sizes: FontSizes): Layout {
-  if (aspect === 'story') {
-    const pad = 96;
-    const headerEyebrowY = 160;
-    const headerNameY = headerEyebrowY + 110;
-    const radarRadius = 410;
-    const center: Point = { x: LOGICAL_W / 2, y: 900 };
-    const statTop = 1410;
-    const footerY = logicalH - 70;
-    return { pad, headerEyebrowY, headerNameY, center, radarRadius, statTop, footerY, logicalH };
-  }
-  const pad = 64;
-  const headerEyebrowY = 92;
-  const headerNameY = 165;
-  const radarRadius = 305;
-  const center: Point = { x: LOGICAL_W / 2, y: 560 };
-  const statTop = 950;
-  const footerY = logicalH - 32;
-  return { pad, headerEyebrowY, headerNameY, center, radarRadius, statTop, footerY, logicalH };
+function computeLayout(): Layout {
+  return {
+    pad: 64,
+    frameInset: 28,
+    headerEyebrowY: 100,
+    headerNameY: 184,
+    center: { x: LOGICAL_W / 2, y: 620 },
+    radarRadius: 365,
+    footerY: LOGICAL_H - 26,
+  };
 }
 
 type SkiaFont = NonNullable<ReturnType<typeof useFont>>;
 
 function HeaderZone({
-  aspect,
   eyebrowText,
   nameText,
   heroFont,
   eyebrowFont,
   layout,
 }: {
-  aspect: CardAspect;
   eyebrowText: string;
   nameText: string;
   heroFont: SkiaFont;
   eyebrowFont: SkiaFont;
   layout: Layout;
 }) {
-  if (aspect === 'story') {
-    const eyebrowW = eyebrowFont.measureText(eyebrowText).width;
-    const eyebrowX = (LOGICAL_W - eyebrowW) / 2;
-    const display = trimToWidth(nameText, heroFont, LOGICAL_W - layout.pad * 2);
-    const nameW = heroFont.measureText(display).width;
-    const nameX = (LOGICAL_W - nameW) / 2;
-    return (
-      <Group>
-        <SkText
-          x={eyebrowX}
-          y={layout.headerEyebrowY}
-          text={eyebrowText}
-          font={eyebrowFont}
-          color="rgba(255,255,255,0.78)"
-        />
-        <SkText
-          x={nameX}
-          y={layout.headerNameY}
-          text={display}
-          font={heroFont}
-          color="#FFFFFF"
-        />
-      </Group>
-    );
-  }
+  const eyebrowW = eyebrowFont.measureText(eyebrowText).width;
+  const eyebrowX = (LOGICAL_W - eyebrowW) / 2;
+
   const display = trimToWidth(nameText, heroFont, LOGICAL_W - layout.pad * 2);
+  const nameW = heroFont.measureText(display).width;
+  const nameX = (LOGICAL_W - nameW) / 2;
+
   return (
     <Group>
       <SkText
-        x={layout.pad}
+        x={eyebrowX}
         y={layout.headerEyebrowY}
         text={eyebrowText}
         font={eyebrowFont}
         color="rgba(255,255,255,0.78)"
       />
       <SkText
-        x={layout.pad}
+        x={nameX}
         y={layout.headerNameY}
         text={display}
         font={heroFont}
@@ -450,194 +370,27 @@ function HeaderZone({
   );
 }
 
-function SquareStatStrip({
+function FooterBrand({
   layout,
-  eyebrowFont,
-  traitFont,
-  top,
-  low,
-  overall,
+  footerFont,
+  archetypeText,
 }: {
   layout: Layout;
-  eyebrowFont: SkiaFont;
-  traitFont: SkiaFont;
-  top: { label: string; score: number };
-  low: { label: string; score: number };
-  overall: number;
+  footerFont: SkiaFont;
+  archetypeText: string;
 }) {
-  const stripH = 110;
-  const stripY = layout.statTop;
-  const stripX = layout.pad;
-  const stripW = LOGICAL_W - layout.pad * 2;
-  const colW = stripW / 3;
-
-  const cols = [
-    { eyebrow: 'TOP TRAIT', mainText: top.label.toUpperCase() },
-    { eyebrow: 'OVERALL', mainText: `${overall}` },
-    { eyebrow: 'LOWEST', mainText: low.label.toUpperCase() },
-  ];
-
+  const text = `${archetypeText}  ·  RADARRANK`;
+  const w = footerFont.measureText(text).width;
   return (
-    <Group>
-      {/* Translucent backing panel + thin top/bottom rules */}
-      <Rect x={stripX} y={stripY} width={stripW} height={stripH} color="rgba(0,0,0,0.24)" />
-      <Rect x={stripX} y={stripY} width={stripW} height={1} color="rgba(255,255,255,0.20)" />
-      <Rect
-        x={stripX}
-        y={stripY + stripH - 1}
-        width={stripW}
-        height={1}
-        color="rgba(255,255,255,0.08)"
-      />
-
-      {cols.map((col, i) => {
-        const colCenterX = stripX + colW * i + colW / 2;
-        const eyebrowW = eyebrowFont.measureText(col.eyebrow).width;
-        const eyebrowX = colCenterX - eyebrowW / 2;
-        const eyebrowY = stripY + 34;
-
-        const main = trimToWidth(col.mainText, traitFont, colW - 28);
-        const mainTw = traitFont.measureText(main).width;
-        const mainX = colCenterX - mainTw / 2;
-        const mainY = stripY + 86;
-
-        return (
-          <Group key={col.eyebrow}>
-            <SkText
-              x={eyebrowX}
-              y={eyebrowY}
-              text={col.eyebrow}
-              font={eyebrowFont}
-              color="rgba(255,255,255,0.65)"
-            />
-            <SkText x={mainX} y={mainY} text={main} font={traitFont} color="#FFFFFF" />
-            {i < cols.length - 1 && (
-              <Rect
-                x={stripX + colW * (i + 1) - 0.5}
-                y={stripY + 22}
-                width={1}
-                height={stripH - 44}
-                color="rgba(255,255,255,0.12)"
-              />
-            )}
-          </Group>
-        );
-      })}
-    </Group>
+    <SkText
+      x={(LOGICAL_W - w) / 2}
+      y={layout.footerY}
+      text={text}
+      font={footerFont}
+      color="rgba(255,255,255,0.48)"
+    />
   );
 }
-
-function StoryStatStack({
-  layout,
-  eyebrowFont,
-  traitFont,
-  vertexFont,
-  metricFont,
-  top,
-  low,
-  overall,
-}: {
-  layout: Layout;
-  eyebrowFont: SkiaFont;
-  traitFont: SkiaFont;
-  vertexFont: SkiaFont;
-  metricFont: SkiaFont;
-  top: { label: string; score: number };
-  low: { label: string; score: number };
-  overall: number;
-}) {
-  const cx = LOGICAL_W / 2;
-
-  const eyebrowText = 'OVERALL RATING';
-  const eyebrowW = eyebrowFont.measureText(eyebrowText).width;
-  const eyebrowBaseline = layout.statTop;
-
-  const numStr = `${overall}`;
-  const numW = metricFont.measureText(numStr).width;
-  const numBaseline = eyebrowBaseline + 145;
-
-  // Two-column TOP / LOWEST row — flows directly from the big number.
-  const traitRowEyebrow = numBaseline + 110;
-  const traitLabelBaseline = traitRowEyebrow + 56;
-  const traitScoreBaseline = traitLabelBaseline + 42;
-
-  const colHalf = LOGICAL_W / 2;
-  const topX = layout.pad;
-  const lowX = colHalf + 24;
-  const traitColW = LOGICAL_W / 2 - layout.pad - 24;
-
-  return (
-    <Group>
-      <SkText
-        x={cx - eyebrowW / 2}
-        y={eyebrowBaseline}
-        text={eyebrowText}
-        font={eyebrowFont}
-        color="rgba(255,255,255,0.72)"
-      />
-      <SkText
-        x={cx - numW / 2}
-        y={numBaseline}
-        text={numStr}
-        font={metricFont}
-        color="#FFFFFF"
-      />
-
-      <SkText
-        x={topX}
-        y={traitRowEyebrow}
-        text="TOP TRAIT"
-        font={eyebrowFont}
-        color="rgba(255,255,255,0.65)"
-      />
-      <SkText
-        x={topX}
-        y={traitLabelBaseline}
-        text={trimToWidth(top.label.toUpperCase(), traitFont, traitColW)}
-        font={traitFont}
-        color="#FFFFFF"
-      />
-      <SkText
-        x={topX}
-        y={traitScoreBaseline}
-        text={`${top.score} /100`}
-        font={vertexFont}
-        color="rgba(255,255,255,0.7)"
-      />
-
-      <SkText
-        x={lowX}
-        y={traitRowEyebrow}
-        text="LOWEST"
-        font={eyebrowFont}
-        color="rgba(255,255,255,0.65)"
-      />
-      <SkText
-        x={lowX}
-        y={traitLabelBaseline}
-        text={trimToWidth(low.label.toUpperCase(), traitFont, traitColW)}
-        font={traitFont}
-        color="#FFFFFF"
-      />
-      <SkText
-        x={lowX}
-        y={traitScoreBaseline}
-        text={`${low.score} /100`}
-        font={vertexFont}
-        color="rgba(255,255,255,0.7)"
-      />
-
-      <Rect
-        x={colHalf - 0.5}
-        y={traitRowEyebrow - 24}
-        width={1}
-        height={traitScoreBaseline - traitRowEyebrow + 36}
-        color="rgba(255,255,255,0.16)"
-      />
-    </Group>
-  );
-}
-
 
 function polylineToPath(points: Point[], closed: boolean) {
   const p = Skia.Path.Make();

@@ -54,3 +54,17 @@ export function gradeFromScore(score: number): string {
   if (score >= 16) return 'D-';
   return 'F';
 }
+
+// Coarse archetype derived from average + spread. Used as the small
+// "profile type" eyebrow on the card.
+export function profileArchetype(template: Template, scores: Scores): string {
+  const items = scoredCategories(template, scores);
+  if (items.length === 0) return 'Profile';
+  const vals = items.map((i) => i.score);
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+  const spread = Math.max(...vals) - Math.min(...vals);
+  if (avg >= 82) return 'Elite Profile';
+  if (spread >= 40) return 'Specialist Profile';
+  if (spread >= 22) return 'Versatile Profile';
+  return 'Balanced Profile';
+}

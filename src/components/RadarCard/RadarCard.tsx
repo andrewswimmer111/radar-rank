@@ -1,5 +1,6 @@
 import {
   Canvas,
+  type CanvasRef,
   Group,
   LinearGradient,
   Path,
@@ -9,7 +10,7 @@ import {
   useFont,
   vec,
 } from '@shopify/react-native-skia';
-import { useMemo } from 'react';
+import { useMemo, type RefObject } from 'react';
 import { View } from 'react-native';
 
 import type { Template } from '@/data/types';
@@ -40,9 +41,17 @@ export type RadarCardProps = {
   archetype: ArchetypeResult;
   width: number;
   height: number;
+  canvasRef?: RefObject<CanvasRef | null>;
 };
 
-export function RadarCard({ template, draft, archetype, width, height }: RadarCardProps) {
+export function RadarCard({
+  template,
+  draft,
+  archetype,
+  width,
+  height,
+  canvasRef,
+}: RadarCardProps) {
   const heroFont = useFont(
     require('@expo-google-fonts/bricolage-grotesque/800ExtraBold/BricolageGrotesque_800ExtraBold.ttf'),
     NAME_SIZE,
@@ -151,7 +160,7 @@ export function RadarCard({ template, draft, archetype, width, height }: RadarCa
         borderRadius: width * 0.05,
         backgroundColor: '#0B0B10',
       }}>
-      <Canvas style={{ width, height }}>
+      <Canvas style={{ width, height }} ref={canvasRef}>
         <Group transform={[{ scale }]}>
           {/* Background gradient */}
           <Rect x={0} y={0} width={LOGICAL_W} height={logicalH}>

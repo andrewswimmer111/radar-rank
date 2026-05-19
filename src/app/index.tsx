@@ -1,48 +1,53 @@
-import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { TemplateCard } from '@/components/TemplateCard';
 import { TEMPLATES } from '@/data/templates';
 import { colors, spacing, type } from '@/design/tokens';
 
 export default function Index() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>RadarRank</Text>
-      <Text style={styles.subtitle}>routing skeleton — pick a template</Text>
-      <View style={styles.links}>
-        {TEMPLATES.map((t) => (
-          <Link
-            key={t.id}
-            href={{ pathname: '/create/[templateId]', params: { templateId: t.id } }}
-            asChild>
-            <Pressable style={styles.link}>
-              <Text style={styles.linkText}>
-                {t.emoji}  {t.label}
-              </Text>
-            </Pressable>
-          </Link>
-        ))}
-      </View>
-    </View>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <Text style={styles.eyebrow}>RadarRank</Text>
+          <Text style={styles.title}>Pick a template.</Text>
+          <Text style={styles.subtitle}>
+            Adjust the dials. Generate the stat card. Post it. Ruin a friendship.
+          </Text>
+        </View>
+
+        <View style={styles.list}>
+          {TEMPLATES.map((t) => (
+            <TemplateCard key={t.id} template={t} />
+          ))}
+        </View>
+
+        <Text style={styles.footer}>more templates dropping soon</Text>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
+  safe: { flex: 1, backgroundColor: colors.bg },
+  scroll: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxxl,
+    gap: spacing.xl,
   },
+  header: { gap: 6 },
+  eyebrow: { ...type.label, color: colors.accent, letterSpacing: 2, textTransform: 'uppercase' },
   title: { ...type.hero, color: colors.text },
-  subtitle: { ...type.body, color: colors.textDim, marginTop: 8 },
-  links: { marginTop: spacing.xxl, gap: spacing.md, alignSelf: 'stretch' },
-  link: {
-    backgroundColor: colors.bgElev,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: 14,
+  subtitle: { ...type.body, color: colors.textDim, marginTop: spacing.xs },
+  list: { gap: spacing.lg },
+  footer: {
+    ...type.caption,
+    color: colors.textMute,
+    textAlign: 'center',
+    marginTop: spacing.lg,
   },
-  linkText: { ...type.h2, color: colors.text },
 });

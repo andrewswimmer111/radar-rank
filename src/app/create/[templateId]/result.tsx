@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AspectToggle, type AspectRatio } from '@/components/AspectToggle';
@@ -110,7 +111,10 @@ export default function ResultScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <HeaderBar title={template.label} />
-      <View style={styles.previewArea}>
+      <Animated.View
+        key={aspect}
+        entering={FadeIn.duration(360)}
+        style={styles.previewArea}>
         <RadarCard
           template={template}
           draft={draft}
@@ -118,7 +122,7 @@ export default function ResultScreen() {
           width={cardW}
           height={cardH}
         />
-      </View>
+      </Animated.View>
 
       {/* Offscreen export-resolution card; ref is snapshotted on demand. */}
       <View style={styles.offscreen} pointerEvents="none">
@@ -132,7 +136,9 @@ export default function ResultScreen() {
         />
       </View>
 
-      <View style={[styles.controls, { paddingBottom: insets.bottom + spacing.lg }]}>
+      <Animated.View
+        entering={FadeInDown.duration(420).delay(120)}
+        style={[styles.controls, { paddingBottom: insets.bottom + spacing.lg }]}>
         <AspectToggle value={aspect} onChange={setAspect} />
 
         <View style={styles.actionRow}>
@@ -172,7 +178,7 @@ export default function ResultScreen() {
           style={({ pressed }) => [styles.editLink, pressed && { opacity: 0.6 }]}>
           <Text style={styles.editText}>← Edit</Text>
         </Pressable>
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }

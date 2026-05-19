@@ -1,56 +1,99 @@
-# Welcome to your Expo app 👋
+# RadarRank
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A single-player radar-card generator. Pick a template, drag the sliders, get a witty archetype, export a polished PNG for social.
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Run
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Targets iOS Simulator and Android. Built on Expo SDK 55.
 
-### Other setup steps
+## Stack
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+- Expo SDK 55 + expo-router (file-based routing)
+- `@shopify/react-native-skia` — card rendering + PNG snapshot
+- `@react-native-community/slider` — system slider control
+- `expo-sharing` + `expo-media-library` + `expo-file-system` — export pipeline
+- `react-native-reanimated` — entrance animations
+- `@expo-google-fonts/{bricolage-grotesque,inter}` — typography
 
-## Learn more
+## Project shape
 
-To learn more about developing your project with Expo, look at the following resources:
+```
+src/
+  app/                      file-based routes
+    _layout.tsx             root stack + font gate + splash
+    index.tsx               template picker
+    create/
+      _layout.tsx           wraps /create with DraftProvider
+      [templateId]/
+        index.tsx           slider edit screen
+        result.tsx          card preview + Save/Share
+  components/
+    RadarCard/              Skia card (preview + export size)
+    TemplateCard.tsx        picker card with gradient
+    SliderRow.tsx           styled slider row
+    AspectToggle.tsx        Square/Story segmented control
+    HeaderBar.tsx           shared header with back button
+  data/
+    types.ts                Template, Category, ArchetypeRule
+    templates.ts            the 3 templates and their rules
+  lib/
+    archetype.ts            pickArchetype() — pure scorer
+    exportCard.ts           Skia snapshot → file URI
+  state/
+    DraftProvider.tsx       useReducer-based draft context
+  design/
+    tokens.ts               colors, spacing, type
+    useAppFonts.ts          font loader
+scripts/
+  verify-archetypes.ts      sanity check across score regimes
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Adding a template
 
-## Join the community
+Templates are pure data. To add one, append a `Template` entry to `src/data/templates.ts`:
 
-Join our community of developers creating universal apps.
+```ts
+{
+  id: 'your-id',
+  label: 'Your Label',
+  blurb: 'short pitch',
+  emoji: '🧠',
+  accent: { start: '#hex', end: '#hex', glow: '#hex' },
+  categories: [
+    { key: 'category_key', label: 'Display Name' },
+    // 5–8 entries
+  ],
+  archetypes: [
+    {
+      name: 'The Archetype',
+      tagline: 'one-liner',
+      weights: { category_key: 1.0, other_key: -0.5 },
+      // bias optional; pickArchetype maximizes weighted fitness
+    },
+    // ~6–10 archetypes
+  ],
+}
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Verify your rules cover the four score regimes:
+
+```bash
+node --experimental-strip-types scripts/verify-archetypes.ts
+```
+
+The script checks each template produces ≥3 distinct archetypes across {all-high, all-low, lopsided-strength, lopsided-weakness} and that every weight key exists.
+
+## Export pipeline
+
+The result screen mounts a second, off-screen `<RadarCard>` at 1080-wide export resolution with a `canvasRef`. Save / Share call `snapshotCanvasToFile` (`src/lib/exportCard.ts`), which calls `canvas.makeImageSnapshotAsync()` and writes the PNG bytes to a cache file via `expo-file-system`. The cache URI is then handed to `expo-media-library` or `expo-sharing`.
+
+Story format (9:16) and square (1:1) share the same component — only the `height` prop changes.
+
+## Out of scope (sprint 1)
+
+No auth, no feed, no cloud, no per-user history. Templates are static. The radar card is the deliverable.

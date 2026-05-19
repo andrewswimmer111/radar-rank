@@ -1,32 +1,35 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import type { Template } from '@/data/types';
 import { colors, radii, spacing, type } from '@/design/tokens';
 
-type Props = { template: Template };
+type Props = { template: Template; index: number };
 
-export function TemplateCard({ template }: Props) {
+export function TemplateCard({ template, index }: Props) {
   return (
-    <Link
-      href={{ pathname: '/create/[templateId]', params: { templateId: template.id } }}
-      asChild>
-      <Pressable style={({ pressed }) => [styles.shadow, pressed && styles.pressed]}>
-        <LinearGradient
-          colors={[template.accent.start, template.accent.end]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.card}>
-          <View style={styles.scrim} />
-          <Text style={styles.emoji}>{template.emoji}</Text>
-          <View style={styles.bottom}>
-            <Text style={styles.label}>{template.label}</Text>
-            <Text style={styles.blurb}>{template.blurb}</Text>
-          </View>
-        </LinearGradient>
-      </Pressable>
-    </Link>
+    <Animated.View entering={FadeInDown.duration(420).delay(80 * index)}>
+      <Link
+        href={{ pathname: '/create/[templateId]', params: { templateId: template.id } }}
+        asChild>
+        <Pressable style={({ pressed }) => [styles.shadow, pressed && styles.pressed]}>
+          <LinearGradient
+            colors={[template.accent.start, template.accent.end]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.card}>
+            <View style={styles.scrim} />
+            <Text style={styles.emoji}>{template.emoji}</Text>
+            <View style={styles.bottom}>
+              <Text style={styles.label}>{template.label}</Text>
+              <Text style={styles.blurb}>{template.blurb}</Text>
+            </View>
+          </LinearGradient>
+        </Pressable>
+      </Link>
+    </Animated.View>
   );
 }
 

@@ -20,8 +20,8 @@ export default function Index() {
         </View>
 
         <View style={styles.list}>
-          {TEMPLATES.map((t) => (
-            <TemplateCard key={t.id} template={t} />
+          {TEMPLATES.map((t, i) => (
+            <TemplateCard key={t.id} template={t} index={i} />
           ))}
         </View>
 

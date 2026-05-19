@@ -6,13 +6,6 @@ export type Category = {
   hint?: string;
 };
 
-export type ArchetypeRule = {
-  name: string;
-  tagline: string;
-  weights: Partial<Record<CategoryKey, number>>;
-  bias?: number;
-};
-
 export type TemplateAccent = {
   start: string;
   end: string;
@@ -26,7 +19,6 @@ export type Template = {
   emoji: string;
   accent: TemplateAccent;
   categories: Category[];
-  archetypes: ArchetypeRule[];
 };
 
 export type Scores = Record<CategoryKey, number>;

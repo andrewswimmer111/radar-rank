@@ -1,6 +1,6 @@
 # RadarRank
 
-A single-player radar-card generator. Pick a template, drag the sliders, get a witty archetype, export a polished PNG for social.
+A single-player radar-card generator. Pick a template, drag the sliders, export a polished PNG for social.
 
 ## Run
 
@@ -39,23 +39,20 @@ src/
     AspectToggle.tsx        Square/Story segmented control
     HeaderBar.tsx           shared header with back button
   data/
-    types.ts                Template, Category, ArchetypeRule
-    templates.ts            the 3 templates and their rules
+    types.ts                Template, Category
+    templates.ts            the 3 templates
   lib/
-    archetype.ts            pickArchetype() — pure scorer
     exportCard.ts           Skia snapshot → file URI
   state/
     DraftProvider.tsx       useReducer-based draft context
   design/
     tokens.ts               colors, spacing, type
     useAppFonts.ts          font loader
-scripts/
-  verify-archetypes.ts      sanity check across score regimes
 ```
 
 ## Adding a template
 
-Templates are pure data. To add one, append a `Template` entry to `src/data/templates.ts`:
+Templates are pure data. Append a `Template` entry to `src/data/templates.ts`:
 
 ```ts
 {
@@ -68,25 +65,8 @@ Templates are pure data. To add one, append a `Template` entry to `src/data/temp
     { key: 'category_key', label: 'Display Name' },
     // 5–8 entries
   ],
-  archetypes: [
-    {
-      name: 'The Archetype',
-      tagline: 'one-liner',
-      weights: { category_key: 1.0, other_key: -0.5 },
-      // bias optional; pickArchetype maximizes weighted fitness
-    },
-    // ~6–10 archetypes
-  ],
 }
 ```
-
-Verify your rules cover the four score regimes:
-
-```bash
-node --experimental-strip-types scripts/verify-archetypes.ts
-```
-
-The script checks each template produces ≥3 distinct archetypes across {all-high, all-low, lopsided-strength, lopsided-weakness} and that every weight key exists.
 
 ## Export pipeline
 

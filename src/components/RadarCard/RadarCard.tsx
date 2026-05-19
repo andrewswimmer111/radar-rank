@@ -14,7 +14,6 @@ import { useMemo, type RefObject } from 'react';
 import { View } from 'react-native';
 
 import type { Template } from '@/data/types';
-import type { ArchetypeResult } from '@/lib/archetype';
 
 import {
   axisAngle,
@@ -28,8 +27,6 @@ import {
 const LOGICAL_W = 1080;
 
 const NAME_SIZE = 108;
-const ARCHETYPE_SIZE = 60;
-const TAGLINE_SIZE = 36;
 const AXIS_SIZE = 30;
 const SMALL_SIZE = 24;
 
@@ -38,31 +35,15 @@ type Draft = { name: string; scores: Record<string, number> };
 export type RadarCardProps = {
   template: Template;
   draft: Draft;
-  archetype: ArchetypeResult;
   width: number;
   height: number;
   canvasRef?: RefObject<CanvasRef | null>;
 };
 
-export function RadarCard({
-  template,
-  draft,
-  archetype,
-  width,
-  height,
-  canvasRef,
-}: RadarCardProps) {
+export function RadarCard({ template, draft, width, height, canvasRef }: RadarCardProps) {
   const heroFont = useFont(
     require('@expo-google-fonts/bricolage-grotesque/800ExtraBold/BricolageGrotesque_800ExtraBold.ttf'),
     NAME_SIZE,
-  );
-  const headingFont = useFont(
-    require('@expo-google-fonts/bricolage-grotesque/700Bold/BricolageGrotesque_700Bold.ttf'),
-    ARCHETYPE_SIZE,
-  );
-  const taglineFont = useFont(
-    require('@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf'),
-    TAGLINE_SIZE,
   );
   const axisFont = useFont(
     require('@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf'),
@@ -81,27 +62,16 @@ export function RadarCard({
     const eyebrowY = pad + SMALL_SIZE;
     const nameY = eyebrowY + NAME_SIZE * 1.1;
     const topGap = LOGICAL_W * 0.04;
-    const bottomBlockH = LOGICAL_W * 0.24;
+    const bottomBlockH = LOGICAL_W * 0.10;
     const radarTopY = nameY + topGap;
     const radarBottomY = logicalH - bottomBlockH;
-    const radarRadius = Math.min(LOGICAL_W * 0.34, (radarBottomY - radarTopY) / 2);
+    const radarRadius = Math.min(LOGICAL_W * 0.38, (radarBottomY - radarTopY) / 2);
     const center: Point = { x: LOGICAL_W / 2, y: (radarTopY + radarBottomY) / 2 };
-    const archetypeY = radarBottomY + ARCHETYPE_SIZE;
-    const taglineY = archetypeY + TAGLINE_SIZE * 1.4;
     const brandY = logicalH - pad;
-    return {
-      pad,
-      eyebrowY,
-      nameY,
-      center,
-      radarRadius,
-      archetypeY,
-      taglineY,
-      brandY,
-    };
+    return { pad, eyebrowY, nameY, center, radarRadius, brandY };
   }, [logicalH]);
 
-  if (!heroFont || !headingFont || !taglineFont || !axisFont || !smallFont) {
+  if (!heroFont || !axisFont || !smallFont) {
     return <View style={{ width, height, backgroundColor: '#1A1A22' }} />;
   }
 
@@ -133,14 +103,6 @@ export function RadarCard({
   const upperName = (draft.name || ' ').toUpperCase();
   const nameDisplay = trim(upperName, heroFont, LOGICAL_W - layout.pad * 2);
   const nameX = layout.pad;
-
-  const archetypeDisplay = archetype.name;
-  const archetypeWidth = headingFont.measureText(archetypeDisplay).width;
-  const archetypeX = (LOGICAL_W - archetypeWidth) / 2;
-
-  const taglineDisplay = `“${archetype.tagline}”`;
-  const taglineWidth = taglineFont.measureText(taglineDisplay).width;
-  const taglineX = (LOGICAL_W - taglineWidth) / 2;
 
   const eyebrowText = template.label.toUpperCase();
   const eyebrowX = layout.pad;
@@ -257,24 +219,6 @@ export function RadarCard({
             text={nameDisplay}
             font={heroFont}
             color="#FFFFFF"
-          />
-
-          {/* Archetype */}
-          <SkText
-            x={archetypeX}
-            y={layout.archetypeY}
-            text={archetypeDisplay}
-            font={headingFont}
-            color="#FFFFFF"
-          />
-
-          {/* Tagline */}
-          <SkText
-            x={taglineX}
-            y={layout.taglineY}
-            text={taglineDisplay}
-            font={taglineFont}
-            color="rgba(255,255,255,0.78)"
           />
 
           {/* Brand row */}

@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import * as MediaLibrary from 'expo-media-library';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,7 +21,6 @@ import { HeaderBar } from '@/components/HeaderBar';
 import { RadarCard } from '@/components/RadarCard';
 import { getTemplate } from '@/data/templates';
 import { colors, radii, spacing, type } from '@/design/tokens';
-import { pickArchetype } from '@/lib/archetype';
 import { exportFilename, snapshotCanvasToFile } from '@/lib/exportCard';
 import { useDraft } from '@/state/DraftProvider';
 
@@ -38,12 +37,8 @@ export default function ResultScreen() {
   const exportRef = useCanvasRef();
 
   const template = templateId ? getTemplate(templateId) : undefined;
-  const archetype = useMemo(
-    () => (template && draft ? pickArchetype(template, draft.scores) : null),
-    [template, draft],
-  );
 
-  if (!template || !draft || draft.templateId !== templateId || !archetype) {
+  if (!template || !draft || draft.templateId !== templateId) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <HeaderBar title="Result" />
@@ -118,7 +113,6 @@ export default function ResultScreen() {
         <RadarCard
           template={template}
           draft={draft}
-          archetype={archetype}
           width={cardW}
           height={cardH}
         />
@@ -129,7 +123,6 @@ export default function ResultScreen() {
         <RadarCard
           template={template}
           draft={draft}
-          archetype={archetype}
           width={EXPORT_WIDTH}
           height={exportH}
           canvasRef={exportRef}

@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +17,7 @@ import { HeaderBar } from '@/components/HeaderBar';
 import { SliderRow } from '@/components/SliderRow';
 import { getTemplate } from '@/data/templates';
 import { colors, radii, spacing, type } from '@/design/tokens';
+import { overallScore } from '@/lib/stats';
 import { useDraft } from '@/state/DraftProvider';
 
 export default function EditScreen() {
@@ -28,6 +29,11 @@ export default function EditScreen() {
   useEffect(() => {
     if (templateId && draft?.templateId !== templateId) loadTemplate(templateId);
   }, [templateId, draft?.templateId, loadTemplate]);
+
+  const overall = useMemo(() => {
+    if (!template || !draft) return 0;
+    return overallScore(template, draft.scores);
+  }, [template, draft]);
 
   if (!template || !draft) {
     return (
@@ -75,9 +81,14 @@ export default function EditScreen() {
             autoCorrect={false}
           />
 
-          <View style={styles.divider} />
+          <View style={styles.statsHeader}>
+            <Text style={styles.eyebrow}>Stats</Text>
+            <View style={styles.overallChip}>
+              <Text style={styles.overallLabel}>OVR</Text>
+              <Text style={styles.overallValue}>{overall}</Text>
+            </View>
+          </View>
 
-          <Text style={styles.eyebrow}>Stats</Text>
           <View style={styles.sliders}>
             {template.categories.map((cat) => (
               <SliderRow
@@ -119,10 +130,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   eyebrow: {
-    ...type.label,
+    ...type.eyebrow,
     color: colors.textMute,
     textTransform: 'uppercase',
-    letterSpacing: 1.4,
   },
   nameInput: {
     ...type.h1,
@@ -132,14 +142,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     marginTop: spacing.xs,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.sm,
+  statsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
   },
-  sliders: { marginTop: spacing.xs, gap: spacing.xs },
+  overallChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 5,
+    borderRadius: radii.pill,
+    backgroundColor: colors.bgElev,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  overallLabel: {
+    ...type.eyebrow,
+    color: colors.textMute,
+  },
+  overallValue: {
+    ...type.h2,
+    color: colors.text,
+  },
+  sliders: { marginTop: spacing.sm, gap: spacing.xs },
   footer: {
     position: 'absolute',
     left: 0,

@@ -1,59 +1,119 @@
 import type { Template } from './types';
 
 export const TEMPLATES: Template[] = [
-  {
-    id: 'gym-bro',
-    label: 'Gym Bro',
-    blurb: 'The cold truth about your lifting persona',
-    emoji: '🦍',
-    accent: { start: '#FF8A3D', end: '#FF2D87', glow: '#FF6B3D' },
-    categories: [
-      { key: 'mass', label: 'Mass', hint: 'plate count, not vibes' },
-      { key: 'mirror_time', label: 'Mirror Time' },
-      { key: 'preworkout', label: 'Pre-Workout Reliance' },
-      { key: 'form', label: 'Form' },
-      { key: 'rest_day_hatred', label: 'Rest-Day Hatred' },
-      { key: 'aesthetic_splits', label: 'Aesthetic Splits' },
-    ],
-  },
-  {
-    id: 'roommate',
-    label: 'Roommate',
-    blurb: 'Your lease behavior, finally on the record',
-    emoji: '🛋️',
-    accent: { start: '#9B8CFF', end: '#5BD2F0', glow: '#7AA9FF' },
-    categories: [
-      { key: 'dish_karma', label: 'Dish Karma' },
-      { key: 'noise_discipline', label: 'Noise Discipline' },
-      { key: 'bill_reliability', label: 'Bill Reliability' },
-      { key: 'vibe_curation', label: 'Vibe Curation' },
-      { key: 'snack_sharing', label: 'Snack Sharing' },
-      { key: 'bathroom_honor', label: 'Bathroom Honor' },
-    ],
-  },
-  {
-    id: 'dating-profile',
-    label: 'Dating Profile',
-    blurb: 'A cold radar of your romantic export',
-    emoji: '💌',
-    accent: { start: '#FF4FB1', end: '#FF7A4F', glow: '#FF6B8C' },
-    categories: [
-      { key: 'selfie_game', label: 'Selfie Game' },
-      { key: 'bio_wit', label: 'Bio Wit' },
-      { key: 'texting_stamina', label: 'Texting Stamina' },
-      { key: 'date_logistics', label: 'Date Logistics' },
-      { key: 'mystery', label: 'Mystery' },
-      { key: 'red_flag_energy', label: 'Red Flag Energy' },
-    ],
-  },
+{
+id: 'athleticism',
+label: 'Athleticism',
+blurb: 'A subjective breakdown of movement, endurance, and coordination.',
+emoji: '🏃',
+accent: {
+start: '#FF8A3D',
+end: '#FF4D6D',
+glow: '#FF7A45',
+},
+categories: [
+{ key: 'basketball', label: 'Basketball' },
+{ key: 'soccer', label: 'Soccer' },
+{ key: 'football', label: 'Football' },
+{ key: 'swimming', label: 'Swimming' },
+{ key: 'running', label: 'Running' },
+{ key: 'coordination', label: 'Coordination' },
+],
+},
+
+{
+id: 'roommate-profile',
+label: 'Roommate Profile',
+blurb: 'Living compatibility, quantified through observation and opinion.',
+emoji: '🛋️',
+accent: {
+start: '#8B8CFF',
+end: '#5CC8FF',
+glow: '#7AA9FF',
+},
+categories: [
+{ key: 'cleanliness', label: 'Cleanliness' },
+{ key: 'noise_awareness', label: 'Noise Awareness' },
+{ key: 'bill_reliability', label: 'Bill Reliability' },
+{ key: 'kitchen_etiquette', label: 'Kitchen Etiquette' },
+{ key: 'guest_management', label: 'Guest Management' },
+{ key: 'overall_vibes', label: 'Overall Vibes' },
+],
+},
+
+{
+id: 'dating-profile',
+label: 'Dating Profile',
+blurb: 'A subjective profile of communication, chemistry, and consistency.',
+emoji: '💌',
+accent: {
+start: '#FF4FB1',
+end: '#FF7A4F',
+glow: '#FF6B8C',
+},
+categories: [
+{ key: 'conversation', label: 'Conversation' },
+{ key: 'initiative', label: 'Initiative' },
+{ key: 'reliability', label: 'Reliability' },
+{ key: 'humor', label: 'Humor' },
+{ key: 'mystery', label: 'Mystery' },
+{ key: 'chemistry', label: 'Chemistry' },
+],
+},
+
+{
+id: 'basketball-player',
+label: 'Basketball Player',
+blurb: 'Scouting-report style evaluation across core skill areas.',
+emoji: '🏀',
+accent: {
+start: '#FF9F43',
+end: '#FF5E62',
+glow: '#FF7B54',
+},
+categories: [
+{ key: 'shooting', label: 'Shooting' },
+{ key: 'handles', label: 'Handles' },
+{ key: 'playmaking', label: 'Playmaking' },
+{ key: 'defense', label: 'Defense' },
+{ key: 'athleticism', label: 'Athleticism' },
+{ key: 'basketball_iq', label: 'Basketball IQ' },
+],
+},
+
+{
+id: 'music-taste',
+label: 'Music Taste',
+blurb: 'A profile of discovery, range, consistency, and replay value.',
+emoji: '🎧',
+accent: {
+start: '#7F5AF0',
+end: '#2CB67D',
+glow: '#9B7BFF',
+},
+categories: [
+{ key: 'range', label: 'Range' },
+{ key: 'discovery', label: 'Discovery' },
+{ key: 'consistency', label: 'Consistency' },
+{ key: 'replayability', label: 'Replayability' },
+{ key: 'taste_level', label: 'Taste Level' },
+{ key: 'aux_skill', label: 'Aux Skill' },
+],
+},
 ];
 
 export function getTemplate(id: string): Template | undefined {
-  return TEMPLATES.find((t) => t.id === id);
+return TEMPLATES.find((t) => t.id === id);
 }
 
-export function defaultScoresFor(template: Template): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const c of template.categories) out[c.key] = 50;
-  return out;
+export function defaultScoresFor(
+template: Template
+): Record<string, number> {
+const out: Record<string, number> = {};
+
+for (const c of template.categories) {
+out[c.key] = 50;
+}
+
+return out;
 }

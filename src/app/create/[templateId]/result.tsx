@@ -20,7 +20,7 @@ import { AspectToggle, type AspectRatio } from '@/components/AspectToggle';
 import { HeaderBar } from '@/components/HeaderBar';
 import { RadarCard } from '@/components/RadarCard';
 import { getTemplate } from '@/data/templates';
-import { colors, radii, spacing, type } from '@/design/tokens';
+import { colors, radii, shadows, spacing, type } from '@/design/tokens';
 import { exportFilename, snapshotCanvasToFile } from '@/lib/exportCard';
 import { useDraft } from '@/state/DraftProvider';
 
@@ -49,7 +49,7 @@ export default function ResultScreen() {
     );
   }
 
-  const reservedV = 240 + insets.top + insets.bottom;
+  const reservedV = 248 + insets.top + insets.bottom;
   const availW = SCREEN_W - spacing.xl * 2;
   const availH = SCREEN_H - reservedV;
   const ratio = ASPECT_RATIO[aspect];
@@ -58,6 +58,7 @@ export default function ResultScreen() {
   const exportH = EXPORT_WIDTH * ratio;
 
   const onEdit = () => {
+    Haptics.selectionAsync().catch(() => {});
     router.push({
       pathname: '/create/[templateId]',
       params: { templateId: template.id },
@@ -108,14 +109,17 @@ export default function ResultScreen() {
       <HeaderBar title={template.label} />
       <Animated.View
         key={aspect}
-        entering={FadeIn.duration(360)}
+        entering={FadeIn.duration(380)}
         style={styles.previewArea}>
-        <RadarCard
-          template={template}
-          draft={draft}
-          width={cardW}
-          height={cardH}
-        />
+        <View style={[styles.cardShadow, { width: cardW, height: cardH }]}>
+          <RadarCard
+            template={template}
+            draft={draft}
+            width={cardW}
+            height={cardH}
+            aspect={aspect}
+          />
+        </View>
       </Animated.View>
 
       {/* Offscreen export-resolution card; ref is snapshotted on demand. */}
@@ -125,52 +129,54 @@ export default function ResultScreen() {
           draft={draft}
           width={EXPORT_WIDTH}
           height={exportH}
+          aspect={aspect}
           canvasRef={exportRef}
         />
       </View>
 
       <Animated.View
-        entering={FadeInDown.duration(420).delay(120)}
+        entering={FadeInDown.duration(420).delay(140)}
         style={[styles.controls, { paddingBottom: insets.bottom + spacing.lg }]}>
         <AspectToggle value={aspect} onChange={setAspect} />
 
         <View style={styles.actionRow}>
           <Pressable
+            onPress={onEdit}
+            style={({ pressed }) => [
+              styles.actionGhost,
+              pressed && styles.pressed,
+            ]}>
+            <Text style={styles.actionGhostText}>Edit</Text>
+          </Pressable>
+          <Pressable
             onPress={onSave}
             disabled={!!busy}
             style={({ pressed }) => [
-              styles.action,
+              styles.actionGhost,
               pressed && styles.pressed,
               !!busy && styles.actionBusy,
             ]}>
             {busy === 'save' ? (
-              <ActivityIndicator color={colors.text} />
+              <ActivityIndicator color={colors.text} size="small" />
             ) : (
-              <Text style={styles.actionText}>Save</Text>
+              <Text style={styles.actionGhostText}>Save</Text>
             )}
           </Pressable>
           <Pressable
             onPress={onShare}
             disabled={!!busy}
             style={({ pressed }) => [
-              styles.action,
               styles.actionPrimary,
               pressed && styles.pressed,
               !!busy && styles.actionBusy,
             ]}>
             {busy === 'share' ? (
-              <ActivityIndicator color={colors.bg} />
+              <ActivityIndicator color={colors.bg} size="small" />
             ) : (
-              <Text style={[styles.actionText, styles.actionPrimaryText]}>Share</Text>
+              <Text style={styles.actionPrimaryText}>Share</Text>
             )}
           </Pressable>
         </View>
-
-        <Pressable
-          onPress={onEdit}
-          style={({ pressed }) => [styles.editLink, pressed && { opacity: 0.6 }]}>
-          <Text style={styles.editText}>← Edit</Text>
-        </Pressable>
       </Animated.View>
     </SafeAreaView>
   );
@@ -191,28 +197,53 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
+  cardShadow: {
+    ...shadows.card,
+    borderRadius: radii.xl,
+  },
   offscreen: {
     position: 'absolute',
     top: -20000,
     left: -20000,
     opacity: 0,
   },
-  controls: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, gap: spacing.md },
-  actionRow: { flexDirection: 'row', gap: spacing.md },
-  action: {
+  controls: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    gap: spacing.md,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  actionGhost: {
     flex: 1,
-    paddingVertical: spacing.lg,
-    borderRadius: radii.lg,
+    paddingVertical: 12,
+    borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.bgElev,
-    minHeight: 56,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    minHeight: 48,
   },
-  actionPrimary: { backgroundColor: colors.accent },
+  actionGhostText: {
+    ...type.h3,
+    color: colors.text,
+  },
+  actionPrimary: {
+    flex: 1.2,
+    paddingVertical: 12,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.accent,
+    minHeight: 48,
+  },
+  actionPrimaryText: {
+    ...type.h3,
+    color: colors.bg,
+  },
   actionBusy: { opacity: 0.7 },
-  pressed: { transform: [{ scale: 0.98 }], opacity: 0.92 },
-  actionText: { ...type.h2, color: colors.text },
-  actionPrimaryText: { color: colors.bg },
-  editLink: { alignSelf: 'center', padding: spacing.sm },
-  editText: { ...type.label, color: colors.textDim },
+  pressed: { transform: [{ scale: 0.97 }], opacity: 0.92 },
 });

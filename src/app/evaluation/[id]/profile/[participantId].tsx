@@ -238,6 +238,7 @@ export default function ProfileScreen() {
               draft={legacyDraft}
               width={previewSize}
               height={previewSize}
+              peerOverallScores={peerOvrs}
             />
           </View>
 
@@ -280,6 +281,7 @@ export default function ProfileScreen() {
           width={EXPORT_WIDTH}
           height={EXPORT_WIDTH}
           canvasRef={exportRef}
+          peerOverallScores={peerOvrs}
         />
       </View>
 

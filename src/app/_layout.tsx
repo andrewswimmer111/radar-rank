@@ -1,10 +1,11 @@
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { initDb } from '@/db';
 import { colors } from '@/design/tokens';
 import { useAppFonts } from '@/design/useAppFonts';
 
@@ -12,12 +13,17 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const fontsLoaded = useAppFonts();
+  const [dbReady, setDbReady] = useState(false);
 
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
-  }, [fontsLoaded]);
+    initDb().then(() => setDbReady(true));
+  }, []);
 
-  if (!fontsLoaded) return null;
+  useEffect(() => {
+    if (fontsLoaded && dbReady) SplashScreen.hideAsync().catch(() => {});
+  }, [fontsLoaded, dbReady]);
+
+  if (!fontsLoaded || !dbReady) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>

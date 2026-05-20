@@ -43,7 +43,8 @@
           "savePhotosPermission": "Allow RadarRank to save your generated cards to Photos.",
           "isAccessMediaLocationEnabled": false
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,

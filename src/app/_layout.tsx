@@ -16,7 +16,12 @@ export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
 
   useEffect(() => {
-    initDb().then(() => setDbReady(true));
+    initDb()
+      .then(() => setDbReady(true))
+      .catch((e) => {
+        console.error('[layout] DB init failed:', e);
+        setDbReady(true);
+      });
   }, []);
 
   useEffect(() => {

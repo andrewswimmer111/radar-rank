@@ -10,12 +10,17 @@ type Props = {
   value: number;
   accent: string;
   onChange: (next: number) => void;
+  onCommit?: (next: number) => void;
 };
 
-export function SliderRow({ label, value, accent, onChange }: Props) {
-  const handleComplete = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-  }, []);
+export function SliderRow({ label, value, accent, onChange, onCommit }: Props) {
+  const handleComplete = useCallback(
+    (next: number) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      onCommit?.(next);
+    },
+    [onCommit],
+  );
 
   return (
     <View style={styles.row}>

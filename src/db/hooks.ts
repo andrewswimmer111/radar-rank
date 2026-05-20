@@ -6,6 +6,7 @@ import * as evaluationCategoriesDb from './evaluationCategories';
 import * as participantsDb from './participants';
 import * as peopleDb from './people';
 import * as scoresDb from './scores';
+import * as snapshotDb from './snapshot';
 import * as templatesDb from './templates';
 import * as templateCategoriesDb from './templateCategories';
 
@@ -359,4 +360,14 @@ export async function upsertScore(input: scoresDb.Score) {
   await scoresDb.upsertScore(input);
   // OVR / percentile derived from scores → bump the evaluations list too.
   publish(T.scores(input.evaluationId), T.evaluations);
+}
+
+// Snapshot creates a full evaluation from a collection × template in a
+// single transaction. One invalidation fires at the end.
+export async function snapshotEvaluation(
+  input: Parameters<typeof snapshotDb.snapshotEvaluation>[0],
+): Promise<string> {
+  const id = await snapshotDb.snapshotEvaluation(input);
+  publish(T.evaluations);
+  return id;
 }

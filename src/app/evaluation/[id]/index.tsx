@@ -1,6 +1,8 @@
+import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
@@ -18,7 +20,9 @@ import { HeaderBar } from '@/components/HeaderBar';
 import {
   createParticipant,
   deleteEvaluation,
+  deleteParticipant,
   updateEvaluation,
+  updateParticipant,
   useCollection,
   useEvaluation,
   useEvaluationCategories,
@@ -256,9 +260,56 @@ function ParticipantRow({
   const totalPeers = peerOvrs.length;
   const rank = participant.excluded ? null : rankAmong(ovr, peerOvrs);
 
+  const onToggleExcluded = () =>
+    updateParticipant(participant.id, evaluationId, {
+      excluded: !participant.excluded,
+    });
+
+  const onConfirmRemove = () =>
+    Alert.alert(
+      `Remove ${participant.name}?`,
+      'All their scores will be deleted.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => deleteParticipant(participant.id, evaluationId),
+        },
+      ],
+    );
+
+  const onLongPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    const toggleLabel = participant.excluded ? 'Include' : 'Exclude';
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: participant.name,
+          options: [toggleLabel, 'Remove', 'Cancel'],
+          destructiveButtonIndex: 1,
+          cancelButtonIndex: 2,
+          userInterfaceStyle: 'dark',
+        },
+        (index) => {
+          if (index === 0) onToggleExcluded();
+          else if (index === 1) onConfirmRemove();
+        },
+      );
+    } else {
+      Alert.alert(participant.name, undefined, [
+        { text: toggleLabel, onPress: onToggleExcluded },
+        { text: 'Remove', style: 'destructive', onPress: onConfirmRemove },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
+  };
+
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={350}
       style={({ pressed }) => [
         styles.row,
         participant.excluded && styles.rowExcluded,

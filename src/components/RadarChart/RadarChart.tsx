@@ -10,14 +10,17 @@ import {
   vec,
 } from '@shopify/react-native-skia';
 import { useEffect, useMemo } from 'react';
-import { Easing, useSharedValue, withTiming } from 'react-native-reanimated';
+import {
+  Easing,
+  useDerivedValue,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import {
   axisAngle,
   labelAnchor,
   labelOffset,
-  pointOnAxis,
-  radarPolygon,
   ringPolygon,
   type Point,
 } from '../RadarCard/geometry';
@@ -174,20 +177,104 @@ function SeriesPolygon({
   series: RadarSeries;
   isMulti: boolean;
 }) {
-  const scoreFractions = categories.map(
-    (c) => Math.round(series.scores[c.key] ?? 50) / 100,
+  const targetFractions = useMemo(
+    () => categories.map((c) => Math.round(series.scores[c.key] ?? 50) / 100),
+    [categories, series.scores],
   );
-  const dataPath = polylineToPath(
-    radarPolygon(center, radius, scoreFractions),
-    true,
-  );
-  const vertexPoints = scoreFractions.map((s, i) =>
-    pointOnAxis(center, radius, axisAngle(i, categories.length), s),
-  );
+  const targetKey = targetFractions.join(',');
 
-  const polyFill = isMulti ? withAlpha(series.color, 0.18) : 'rgba(255,255,255,0.22)';
+  const progress = useSharedValue(1);
+  const fromScales = useSharedValue<number[]>(targetFractions);
+  const toScales = useSharedValue<number[]>(targetFractions);
+
+  // When the score input changes, snapshot the current (possibly mid-
+  // morph) interpolated scales as the new `from`, set the new `to`, and
+  // ease progress 0 → 1 over 240ms. Interrupting a morph this way means
+  // chained slider commits chase the latest target smoothly.
+  useEffect(() => {
+    const from = fromScales.value;
+    const to = toScales.value;
+    const t = progress.value;
+    const n = targetFractions.length;
+    const current: number[] = [];
+    for (let i = 0; i < n; i++) {
+      const a = from[i] ?? 0.5;
+      const b = to[i] ?? 0.5;
+      current.push(a + (b - a) * t);
+    }
+    fromScales.value = current;
+    toScales.value = targetFractions;
+    progress.value = 0;
+    progress.value = withTiming(1, {
+      duration: 240,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [targetKey]);
+
+  const dataPath = useDerivedValue(() => {
+    const t = progress.value;
+    const from = fromScales.value;
+    const to = toScales.value;
+    const n = Math.max(from.length, to.length);
+    const p = Skia.Path.Make();
+    if (n < 3) return p;
+    for (let i = 0; i < n; i++) {
+      const a = from[i] ?? 0.5;
+      const b = to[i] ?? 0.5;
+      const s = a + (b - a) * t;
+      const angle = -Math.PI / 2 + (2 * Math.PI * i) / n;
+      const x = center.x + radius * s * Math.cos(angle);
+      const y = center.y + radius * s * Math.sin(angle);
+      if (i === 0) p.moveTo(x, y);
+      else p.lineTo(x, y);
+    }
+    p.close();
+    return p;
+  });
+
+  const outerVertexPath = useDerivedValue(() => {
+    const t = progress.value;
+    const from = fromScales.value;
+    const to = toScales.value;
+    const n = Math.max(from.length, to.length);
+    const p = Skia.Path.Make();
+    for (let i = 0; i < n; i++) {
+      const a = from[i] ?? 0.5;
+      const b = to[i] ?? 0.5;
+      const s = a + (b - a) * t;
+      const angle = -Math.PI / 2 + (2 * Math.PI * i) / n;
+      const cx = center.x + radius * s * Math.cos(angle);
+      const cy = center.y + radius * s * Math.sin(angle);
+      p.addCircle(cx, cy, 9);
+    }
+    return p;
+  });
+
+  const innerVertexPath = useDerivedValue(() => {
+    const t = progress.value;
+    const from = fromScales.value;
+    const to = toScales.value;
+    const n = Math.max(from.length, to.length);
+    const p = Skia.Path.Make();
+    for (let i = 0; i < n; i++) {
+      const a = from[i] ?? 0.5;
+      const b = to[i] ?? 0.5;
+      const s = a + (b - a) * t;
+      const angle = -Math.PI / 2 + (2 * Math.PI * i) / n;
+      const cx = center.x + radius * s * Math.cos(angle);
+      const cy = center.y + radius * s * Math.sin(angle);
+      p.addCircle(cx, cy, 4.5);
+    }
+    return p;
+  });
+
+  const polyFill = isMulti
+    ? withAlpha(series.color, 0.18)
+    : 'rgba(255,255,255,0.22)';
   const polyStroke = isMulti ? series.color : '#FFFFFF';
-  const glowFill = isMulti ? withAlpha(series.color, 0.30) : 'rgba(255,255,255,0.20)';
+  const glowFill = isMulti
+    ? withAlpha(series.color, 0.3)
+    : 'rgba(255,255,255,0.20)';
 
   return (
     <Group>
@@ -204,12 +291,8 @@ function SeriesPolygon({
         strokeJoin="round"
         color={polyStroke}
       />
-      {vertexPoints.map((p, i) => (
-        <Group key={`vx-${i}`}>
-          <Circle cx={p.x} cy={p.y} r={9} color="rgba(255,255,255,0.95)" />
-          <Circle cx={p.x} cy={p.y} r={4.5} color={series.color} />
-        </Group>
-      ))}
+      <Path path={outerVertexPath} style="fill" color="rgba(255,255,255,0.95)" />
+      <Path path={innerVertexPath} style="fill" color={series.color} />
     </Group>
   );
 }

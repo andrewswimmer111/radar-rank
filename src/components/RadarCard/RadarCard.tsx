@@ -1,8 +1,6 @@
 import {
-  BlurMask,
   Canvas,
   type CanvasRef,
-  Circle,
   FractalNoise,
   Group,
   LinearGradient,
@@ -14,10 +12,10 @@ import {
   useFont,
   vec,
 } from '@shopify/react-native-skia';
-import { useEffect, useMemo, type RefObject } from 'react';
+import { useMemo, type RefObject } from 'react';
 import { View } from 'react-native';
-import { Easing, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { RadarChart } from '@/components/RadarChart';
 import type { Template } from '@/data/types';
 import {
   gradeFromScore,
@@ -26,15 +24,7 @@ import {
   profileArchetype,
 } from '@/lib/stats';
 
-import {
-  axisAngle,
-  labelAnchor,
-  labelOffset,
-  pointOnAxis,
-  radarPolygon,
-  ringPolygon,
-  type Point,
-} from './geometry';
+import { type Point } from './geometry';
 
 const LOGICAL_W = 1080;
 const LOGICAL_H = 1080;
@@ -56,7 +46,6 @@ export type RadarCardProps = {
 const SIZES = {
   name: 80,
   eyebrow: 22,
-  axis: 24,
   vertex: 20,
   ovr: 56,
   ovrLabel: 18,
@@ -75,10 +64,6 @@ export function RadarCard({
   const heroFont = useFont(
     require('@expo-google-fonts/bricolage-grotesque/800ExtraBold/BricolageGrotesque_800ExtraBold.ttf'),
     SIZES.name,
-  );
-  const axisFont = useFont(
-    require('@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf'),
-    SIZES.axis,
   );
   const eyebrowFont = useFont(
     require('@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf'),
@@ -107,56 +92,15 @@ export function RadarCard({
 
   const fontsReady =
     heroFont &&
-    axisFont &&
     eyebrowFont &&
     footerFont &&
     ovrFont &&
     ovrLabelFont &&
     gradeFont;
 
-  const chartOpacity = useSharedValue(canvasRef ? 1 : 0);
-  useEffect(() => {
-    if (!canvasRef) {
-      chartOpacity.value = withTiming(1, {
-        duration: 680,
-        easing: Easing.out(Easing.cubic),
-      });
-    }
-  }, []);
-
   if (!fontsReady) {
     return <View style={{ width, height, backgroundColor: '#101018' }} />;
   }
-
-  const scoreList = template.categories.map((c) => Math.round(draft.scores[c.key] ?? 50));
-  const scoreFractions = scoreList.map((s) => s / 100);
-
-  const ringFractions = [0.2, 0.4, 0.6, 0.8, 1.0];
-  const ringPaths = ringFractions.map((f) =>
-    polylineToPath(ringPolygon(layout.center, layout.radarRadius, scoreList.length, f), true),
-  );
-
-  const spokePath = (() => {
-    const p = Skia.Path.Make();
-    for (let i = 0; i < scoreList.length; i++) {
-      const a = axisAngle(i, scoreList.length);
-      p.moveTo(layout.center.x, layout.center.y);
-      p.lineTo(
-        layout.center.x + layout.radarRadius * Math.cos(a),
-        layout.center.y + layout.radarRadius * Math.sin(a),
-      );
-    }
-    return p;
-  })();
-
-  const dataPath = polylineToPath(
-    radarPolygon(layout.center, layout.radarRadius, scoreFractions),
-    true,
-  );
-
-  const vertexPoints = scoreFractions.map((s, i) =>
-    pointOnAxis(layout.center, layout.radarRadius, axisAngle(i, scoreList.length), s),
-  );
 
   const upperName = (draft.name || ' ').toUpperCase();
   const eyebrowText = template.label.toUpperCase();
@@ -248,89 +192,17 @@ export function RadarCard({
             layout={layout}
           />
 
-          {/* Chart group — fades in after card entrance */}
-          <Group opacity={chartOpacity}>
-            {/* Outer glow ring behind chart */}
-            <Group opacity={0.85}>
-              <Circle cx={layout.center.x} cy={layout.center.y} r={layout.radarRadius * 1.18}>
-                <RadialGradient
-                  c={vec(layout.center.x, layout.center.y)}
-                  r={layout.radarRadius * 1.18}
-                  colors={[
-                    withAlpha(template.accent.glow, 0.0),
-                    withAlpha(template.accent.glow, 0.35),
-                    withAlpha(template.accent.glow, 0.0),
-                  ]}
-                  positions={[0.55, 0.78, 1]}
-                />
-              </Circle>
-            </Group>
-
-            {/* Radar rings */}
-            {ringPaths.map((p, i) => (
-              <Path
-                key={`ring-${i}`}
-                path={p}
-                style="stroke"
-                strokeWidth={1.25}
-                color={`rgba(255,255,255,${0.06 + i * 0.04})`}
-              />
-            ))}
-
-            {/* Spokes */}
-            <Path
-              path={spokePath}
-              style="stroke"
-              strokeWidth={1}
-              color="rgba(255,255,255,0.18)"
-            />
-
-            {/* Data polygon — soft white glow underlay */}
-            <Group opacity={0.55}>
-              <Path path={dataPath} style="fill" color="rgba(255,255,255,0.20)">
-                <BlurMask blur={18} style="normal" />
-              </Path>
-            </Group>
-
-            {/* Data polygon fill */}
-            <Path path={dataPath} style="fill" color="rgba(255,255,255,0.22)" />
-
-            {/* Data polygon stroke */}
-            <Path
-              path={dataPath}
-              style="stroke"
-              strokeWidth={4}
-              strokeJoin="round"
-              color="#FFFFFF"
-            />
-
-            {/* Vertex dots */}
-            {vertexPoints.map((p, i) => (
-              <Group key={`vx-${i}`}>
-                <Circle cx={p.x} cy={p.y} r={9} color="rgba(255,255,255,0.95)" />
-                <Circle cx={p.x} cy={p.y} r={4.5} color={template.accent.glow} />
-              </Group>
-            ))}
-
-            {/* Axis labels */}
-            {template.categories.map((cat, i) => {
-              const a = axisAngle(i, scoreList.length);
-              const anchor = labelAnchor(layout.center, layout.radarRadius, a, 22);
-              const label = cat.label.toUpperCase();
-              const tw = axisFont.measureText(label).width;
-              const { x, y } = labelOffset(anchor, a, tw, SIZES.axis * 0.7);
-              return (
-                <SkText
-                  key={cat.key}
-                  x={x}
-                  y={y}
-                  text={label}
-                  font={axisFont}
-                  color="rgba(255,255,255,0.9)"
-                />
-              );
-            })}
-          </Group>
+          {/* Chart layer — rings, spokes, polygon, vertices, axis labels */}
+          <RadarChart
+            center={layout.center}
+            radius={layout.radarRadius}
+            categories={template.categories}
+            series={[
+              { id: 'self', scores: draft.scores, color: template.accent.glow },
+            ]}
+            glowColor={template.accent.glow}
+            animateIn={!canvasRef}
+          />
 
           {/* Stats strip — OVR, grade, optional percentile. Sits above
               the footer brand row. */}
@@ -549,15 +421,6 @@ function StatsStrip({
       })()}
     </Group>
   );
-}
-
-function polylineToPath(points: Point[], closed: boolean) {
-  const p = Skia.Path.Make();
-  if (points.length === 0) return p;
-  p.moveTo(points[0].x, points[0].y);
-  for (let i = 1; i < points.length; i++) p.lineTo(points[i].x, points[i].y);
-  if (closed) p.close();
-  return p;
 }
 
 function trimToWidth(text: string, font: SkiaFont, maxWidth: number): string {

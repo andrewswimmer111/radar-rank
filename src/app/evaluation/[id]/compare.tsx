@@ -80,6 +80,48 @@ export default function CompareScreen() {
     [categories],
   );
 
+  const topTrait = useMemo(() => {
+    if (!selected || selected.length < 2 || cats.length === 0) return null;
+    let best: {
+      categoryLabel: string;
+      participantName: string;
+      score: number;
+    } | null = null;
+    for (const cat of cats) {
+      for (const { participant } of selected) {
+        const score = scoresByParticipant.get(participant.id)?.[cat.key] ?? 50;
+        if (best === null || score > best.score) {
+          best = {
+            categoryLabel: cat.label,
+            participantName: participant.name,
+            score,
+          };
+        }
+      }
+    }
+    return best;
+  }, [cats, selected, scoresByParticipant]);
+
+  const biggestGap = useMemo(() => {
+    if (!selected || selected.length < 2 || cats.length === 0) return null;
+    let best: { categoryLabel: string; spread: number } | null = null;
+    for (const cat of cats) {
+      let min = Infinity;
+      let max = -Infinity;
+      for (const { participant } of selected) {
+        const score = scoresByParticipant.get(participant.id)?.[cat.key] ?? 50;
+        if (score < min) min = score;
+        if (score > max) max = score;
+      }
+      if (min === Infinity) continue;
+      const spread = max - min;
+      if (best === null || spread > best.spread) {
+        best = { categoryLabel: cat.label, spread };
+      }
+    }
+    return best;
+  }, [cats, selected, scoresByParticipant]);
+
   const ready = !!evaluation && !!participants && !!categories && !!scoresFlat;
 
   if (!ready) {
@@ -135,6 +177,33 @@ export default function CompareScreen() {
           { paddingBottom: insets.bottom + spacing.xxl },
         ]}
         showsVerticalScrollIndicator={false}>
+        {(topTrait || biggestGap) && (
+          <View style={styles.callouts}>
+            {topTrait && (
+              <View style={styles.calloutCell}>
+                <Text style={styles.calloutEyebrow}>Top Trait</Text>
+                <Text style={styles.calloutValue} numberOfLines={1}>
+                  {topTrait.categoryLabel}
+                </Text>
+                <Text style={styles.calloutSecondary} numberOfLines={1}>
+                  {topTrait.participantName} · {topTrait.score}
+                </Text>
+              </View>
+            )}
+            {biggestGap && (
+              <View style={styles.calloutCell}>
+                <Text style={styles.calloutEyebrow}>Biggest Gap</Text>
+                <Text style={styles.calloutValue} numberOfLines={1}>
+                  {biggestGap.categoryLabel}
+                </Text>
+                <Text style={styles.calloutSecondary} numberOfLines={1}>
+                  {biggestGap.spread}pt range
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
         <View
           style={[
             styles.chartCard,
@@ -175,6 +244,65 @@ export default function CompareScreen() {
                   <Text style={styles.legendOvr}>{ovr}</Text>
                   <Text style={styles.legendGrade}>{grade}</Text>
                 </View>
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={styles.diff}>
+          <Text style={styles.diffHeading}>By Category</Text>
+          {cats.map((cat) => {
+            const rows = selected.map(({ participant, paletteIndex }) => {
+              const score =
+                scoresByParticipant.get(participant.id)?.[cat.key] ?? 50;
+              const color = participant.color ?? pickPersonColor(paletteIndex);
+              return {
+                id: participant.id,
+                name: participant.name,
+                score,
+                color,
+              };
+            });
+            const maxScore = Math.max(...rows.map((r) => r.score));
+            return (
+              <View key={cat.key} style={styles.diffSection}>
+                <Text style={styles.diffCategory}>{cat.label}</Text>
+                {rows.map((r) => {
+                  const isWinner = r.score === maxScore;
+                  return (
+                    <View key={r.id} style={styles.diffRow}>
+                      <Text
+                        style={[
+                          styles.diffName,
+                          isWinner && styles.diffNameWinner,
+                        ]}
+                        numberOfLines={1}>
+                        {r.name}
+                      </Text>
+                      <View style={styles.diffBarTrack}>
+                        <View
+                          style={[
+                            styles.diffBarFill,
+                            {
+                              width: `${Math.max(2, r.score)}%`,
+                              backgroundColor: r.color,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.diffScore,
+                          isWinner && styles.diffScoreWinner,
+                        ]}>
+                        {r.score}
+                      </Text>
+                      <Text style={styles.diffCheck}>
+                        {isWinner ? '✓' : ' '}
+                      </Text>
+                    </View>
+                  );
+                })}
               </View>
             );
           })}
@@ -235,4 +363,80 @@ const styles = StyleSheet.create({
   },
   legendOvr: { ...type.metric, color: colors.text, fontSize: 20, lineHeight: 22 },
   legendGrade: { ...type.label, color: colors.accent },
+  callouts: {
+    width: '100%',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  calloutCell: {
+    flex: 1,
+    backgroundColor: colors.bgElev,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    gap: 2,
+    minHeight: 76,
+  },
+  calloutEyebrow: {
+    ...type.eyebrow,
+    color: colors.textMute,
+    textTransform: 'uppercase',
+  },
+  calloutValue: { ...type.h3, color: colors.text },
+  calloutSecondary: { ...type.caption, color: colors.textDim },
+  diff: { width: '100%', gap: spacing.md },
+  diffHeading: {
+    ...type.eyebrow,
+    color: colors.textMute,
+    textTransform: 'uppercase',
+  },
+  diffSection: {
+    backgroundColor: colors.bgElev,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    gap: spacing.sm,
+  },
+  diffCategory: {
+    ...type.label,
+    color: colors.textDim,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  diffRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  diffName: {
+    ...type.body,
+    color: colors.textDim,
+    width: 88,
+  },
+  diffNameWinner: { color: colors.text, fontFamily: 'Inter_600SemiBold' },
+  diffBarTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.bgElev2,
+    overflow: 'hidden',
+  },
+  diffBarFill: { height: '100%', borderRadius: 4 },
+  diffScore: {
+    ...type.label,
+    color: colors.textDim,
+    width: 28,
+    textAlign: 'right',
+  },
+  diffScoreWinner: { color: colors.text },
+  diffCheck: {
+    ...type.label,
+    color: colors.accent,
+    width: 14,
+    textAlign: 'center',
+  },
 });

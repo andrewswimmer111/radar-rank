@@ -18,6 +18,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { EvaluationSummary } from '@/components/EvaluationSummary';
 import { HeaderBar } from '@/components/HeaderBar';
+import { SortMenu } from '@/components/SortMenu';
 import {
   createParticipant,
   deleteEvaluation,
@@ -34,7 +35,13 @@ import {
 } from '@/db/hooks';
 import { colors, radii, spacing, type } from '@/design/tokens';
 import { pickPersonColor } from '@/lib/personColors';
-import { ovrByParticipant, rankAmong } from '@/lib/stats';
+import {
+  compareParticipantsBy,
+  ovrByParticipant,
+  rankAmong,
+  spreadByParticipant,
+  type SortMode,
+} from '@/lib/stats';
 
 export default function EvaluationDetail() {
   const insets = useSafeAreaInsets();
@@ -57,6 +64,11 @@ export default function EvaluationDetail() {
 
   const [newParticipantName, setNewParticipantName] = useState('');
 
+  const [sortMode, setSortMode] = useState<SortMode>({ kind: 'manual' });
+  useEffect(() => {
+    setSortMode({ kind: 'manual' });
+  }, [id]);
+
   const participantList = participants ?? [];
   const categoryKeys = useMemo(
     () => (categories ?? []).map((c) => c.key),
@@ -66,6 +78,29 @@ export default function EvaluationDetail() {
     () => ovrByParticipant(scores ?? [], categoryKeys),
     [scores, categoryKeys],
   );
+  const spreadMap = useMemo(
+    () => spreadByParticipant(scores ?? [], categoryKeys),
+    [scores, categoryKeys],
+  );
+  const scoreInCategoryMap = useMemo(() => {
+    if (sortMode.kind !== 'strongestIn') return undefined;
+    const target = sortMode.categoryKey;
+    const out = new Map<string, number>();
+    for (const s of scores ?? []) {
+      if (s.categoryKey === target) out.set(s.participantId, s.value);
+    }
+    return out;
+  }, [scores, sortMode]);
+
+  const sortedParticipants = useMemo(() => {
+    const comparator = compareParticipantsBy(sortMode, {
+      ovrById: ovrMap,
+      spreadById: spreadMap,
+      scoreInCategoryById: scoreInCategoryMap,
+    });
+    return [...participantList].sort(comparator);
+  }, [participantList, sortMode, ovrMap, spreadMap, scoreInCategoryMap]);
+
   const peerOvrs = useMemo(
     () =>
       participantList
@@ -195,8 +230,16 @@ export default function EvaluationDetail() {
             </Text>
           </View>
 
+          {participantList.length >= 2 && (
+            <SortMenu
+              mode={sortMode}
+              categories={categories ?? []}
+              onChange={setSortMode}
+            />
+          )}
+
           <View style={styles.list}>
-            {participantList.map((p) => (
+            {sortedParticipants.map((p) => (
               <ParticipantRow
                 key={p.id}
                 participant={p}

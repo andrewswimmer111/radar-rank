@@ -110,13 +110,11 @@ function CollectionRow({
 function EmptyState() {
   return (
     <Animated.View entering={FadeIn.duration(440)} style={styles.empty}>
-      <View style={styles.emptyIcon}>
-        {Platform.OS === 'ios' ? (
+      {Platform.OS === 'ios' && (
+        <View style={styles.emptyIcon}>
           <SymbolView name="person.3.fill" tintColor={colors.textMute} size={48} />
-        ) : (
-          <Text style={{ fontSize: 32 }}>👥</Text>
-        )}
-      </View>
+        </View>
+      )}
       <Text style={styles.emptyEyebrow}>Collections</Text>
       <Text style={styles.emptyHeadline}>Start with the people.</Text>
       <Text style={styles.emptyBody}>

@@ -40,14 +40,12 @@ export default function TemplateEditor() {
 
   const [nameDraft, setNameDraft] = useState('');
   const [blurbDraft, setBlurbDraft] = useState('');
-  const [emojiDraft, setEmojiDraft] = useState('');
   useEffect(() => {
     if (template) {
       setNameDraft(template.name);
       setBlurbDraft(template.blurb);
-      setEmojiDraft(template.emoji);
     }
-  }, [template?.id, template?.name, template?.blurb, template?.emoji]);
+  }, [template?.id, template?.name, template?.blurb]);
 
   const [newCategoryLabel, setNewCategoryLabel] = useState('');
 
@@ -106,12 +104,6 @@ export default function TemplateEditor() {
   const onBlurbCommit = async () => {
     if (blurbDraft === template.blurb) return;
     await updateTemplate(id, { blurb: blurbDraft });
-  };
-
-  const onEmojiCommit = async () => {
-    const trimmed = emojiDraft.trim();
-    if (trimmed === template.emoji) return;
-    await updateTemplate(id, { emoji: trimmed });
   };
 
   const onAccentPick = async (accent: TemplateAccent) => {
@@ -194,7 +186,6 @@ export default function TemplateEditor() {
           showsVerticalScrollIndicator={false}>
           <Preview
             name={nameDraft || 'Untitled'}
-            emoji={emojiDraft || '✨'}
             accent={template.accent}
           />
 
@@ -220,17 +211,6 @@ export default function TemplateEditor() {
             placeholderTextColor={colors.textMute}
             multiline
             maxLength={140}
-          />
-
-          <Text style={styles.eyebrow}>Emoji</Text>
-          <TextInput
-            style={[styles.input, styles.emojiInput]}
-            value={emojiDraft}
-            onChangeText={setEmojiDraft}
-            onBlur={onEmojiCommit}
-            onSubmitEditing={onEmojiCommit}
-            returnKeyType="done"
-            maxLength={4}
           />
 
           <Text style={styles.eyebrow}>Accent</Text>
@@ -324,11 +304,9 @@ export default function TemplateEditor() {
 
 function Preview({
   name,
-  emoji,
   accent,
 }: {
   name: string;
-  emoji: string;
   accent: TemplateAccent;
 }) {
   return (
@@ -337,9 +315,6 @@ function Preview({
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.preview}>
-      <View style={styles.previewEmoji}>
-        <Text style={styles.previewEmojiText}>{emoji}</Text>
-      </View>
       <Text style={styles.previewName} numberOfLines={1}>
         {name}
       </Text>
@@ -497,17 +472,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     overflow: 'hidden',
   },
-  previewEmoji: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.20)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.30)',
-  },
-  previewEmojiText: { fontSize: 28 },
   previewName: { ...type.h1, color: '#fff', textAlign: 'center' },
   eyebrow: {
     ...type.eyebrow,
@@ -527,7 +491,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   blurbInput: { minHeight: 64, textAlignVertical: 'top' },
-  emojiInput: { fontSize: 28, lineHeight: 32 },
   swatchRow: { paddingVertical: spacing.sm, gap: spacing.sm },
   swatchOuter: {
     padding: 3,

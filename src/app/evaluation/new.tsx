@@ -260,9 +260,8 @@ function TemplatePickRow({
         colors={[template.accent.start, template.accent.end]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.tmplEmojiBubble}>
-        <Text style={styles.tmplEmoji}>{template.emoji || '✦'}</Text>
-      </LinearGradient>
+        style={styles.tmplAccent}
+      />
       <View style={{ flex: 1 }}>
         <Text style={styles.pickName} numberOfLines={1}>
           {template.name}
@@ -335,14 +334,11 @@ const styles = StyleSheet.create({
   pickRowSelected: { borderColor: colors.accent, borderWidth: 1 },
   pickName: { ...type.h3, color: colors.text },
   pickMeta: { ...type.caption, color: colors.textDim, marginTop: 2 },
-  tmplEmojiBubble: {
-    width: 40,
+  tmplAccent: {
+    width: 6,
     height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 3,
   },
-  tmplEmoji: { fontSize: 20 },
   radio: {
     width: 22,
     height: 22,

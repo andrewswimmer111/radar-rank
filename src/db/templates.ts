@@ -11,7 +11,6 @@ export type Template = {
   id: string;
   name: string;
   blurb: string;
-  emoji: string;
   accent: TemplateAccent;
   isBuiltin: boolean;
   createdAt: number;
@@ -22,7 +21,6 @@ type Row = {
   id: string;
   name: string;
   blurb: string;
-  emoji: string;
   accent_start: string;
   accent_end: string;
   accent_glow: string;
@@ -36,7 +34,6 @@ function fromRow(r: Row): Template {
     id: r.id,
     name: r.name,
     blurb: r.blurb,
-    emoji: r.emoji,
     accent: {
       start: r.accent_start,
       end: r.accent_end,
@@ -51,7 +48,6 @@ function fromRow(r: Row): Template {
 export type CreateTemplateInput = {
   name: string;
   blurb?: string;
-  emoji?: string;
   accent: TemplateAccent;
   isBuiltin?: boolean;
   // Optional override so the built-in seeder can use stable IDs.
@@ -63,17 +59,17 @@ export async function createTemplate(input: CreateTemplateInput): Promise<Templa
   const id = input.id ?? genId();
   const ts = now();
   const blurb = input.blurb ?? '';
-  const emoji = input.emoji ?? '';
   const isBuiltinInt = input.isBuiltin ? 1 : 0;
+  // `emoji` column kept in schema for legacy compatibility but no longer
+  // surfaced; relies on the column's NOT NULL DEFAULT '' to populate.
   await db.runAsync(
     `INSERT INTO templates
-      (id, name, blurb, emoji, accent_start, accent_end, accent_glow, is_builtin, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, name, blurb, accent_start, accent_end, accent_glow, is_builtin, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.name,
       blurb,
-      emoji,
       input.accent.start,
       input.accent.end,
       input.accent.glow,
@@ -86,7 +82,6 @@ export async function createTemplate(input: CreateTemplateInput): Promise<Templa
     id,
     name: input.name,
     blurb,
-    emoji,
     accent: input.accent,
     isBuiltin: isBuiltinInt === 1,
     createdAt: ts,
@@ -99,7 +94,6 @@ export async function updateTemplate(
   patch: Partial<{
     name: string;
     blurb: string;
-    emoji: string;
     accent: TemplateAccent;
   }>,
 ): Promise<void> {
@@ -116,10 +110,6 @@ export async function updateTemplate(
   if (patch.blurb !== undefined) {
     fields.push('blurb = ?');
     params.push(patch.blurb);
-  }
-  if (patch.emoji !== undefined) {
-    fields.push('emoji = ?');
-    params.push(patch.emoji);
   }
   if (patch.accent !== undefined) {
     fields.push('accent_start = ?', 'accent_end = ?', 'accent_glow = ?');

@@ -16,7 +16,6 @@ export type Template = {
   id: string;
   label: string;
   blurb: string;
-  emoji: string;
   accent: TemplateAccent;
   categories: Category[];
 };

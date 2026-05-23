@@ -71,9 +71,6 @@ export default function TemplateView() {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.hero}>
-          <View style={styles.heroEmojiBubble}>
-            <Text style={styles.heroEmoji}>{template.emoji || '✦'}</Text>
-          </View>
           <Text style={styles.heroEyebrow}>
             {isBuiltin ? 'Starter template' : 'Custom template'}
           </Text>
@@ -149,18 +146,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     overflow: 'hidden',
   },
-  heroEmojiBubble: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(255,255,255,0.20)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.30)',
-    marginBottom: spacing.sm,
-  },
-  heroEmoji: { fontSize: 36 },
   heroEyebrow: {
     ...type.eyebrow,
     color: 'rgba(255,255,255,0.85)',

@@ -118,9 +118,6 @@ function TemplateCard({ template, index }: { template: Template; index: number }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.card}>
-          <View style={styles.cardEmojiBubble}>
-            <Text style={styles.cardEmoji}>{template.emoji || '✦'}</Text>
-          </View>
           <View style={styles.cardBody}>
             <Text style={styles.cardName} numberOfLines={1}>
               {template.name}
@@ -184,17 +181,6 @@ const styles = StyleSheet.create({
     minHeight: 96,
     overflow: 'hidden',
   },
-  cardEmojiBubble: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.25)',
-  },
-  cardEmoji: { fontSize: 28 },
   cardBody: { flex: 1, gap: 2 },
   cardName: { ...type.h2, color: '#fff' },
   cardBlurb: { ...type.body, color: 'rgba(255,255,255,0.86)' },

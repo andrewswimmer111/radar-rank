@@ -22,7 +22,6 @@ export async function seedBuiltinsIfNeeded(): Promise<void> {
       id: tmpl.id,
       name: tmpl.name,
       blurb: tmpl.blurb,
-      emoji: tmpl.emoji,
       accent: tmpl.accent,
       isBuiltin: true,
     });

@@ -121,7 +121,6 @@ export default function ProfileScreen() {
       id: id,
       label: sourceTemplate?.name ?? evaluation!.title,
       blurb: sourceTemplate?.blurb ?? '',
-      emoji: sourceTemplate?.emoji ?? '✦',
       accent: sourceTemplate?.accent ?? DEFAULT_ACCENT,
       categories: cats.map<Category>((c) => ({
         key: c.key,

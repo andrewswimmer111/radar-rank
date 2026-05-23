@@ -36,13 +36,11 @@ export default function NewTemplate() {
             ? {
                 name: `${source.name} (copy)`,
                 blurb: source.blurb,
-                emoji: source.emoji,
                 accent: source.accent,
               }
             : {
                 name: 'Untitled template',
                 blurb: '',
-                emoji: '✨',
                 accent: DEFAULT_ACCENT,
               },
         );

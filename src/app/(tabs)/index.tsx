@@ -14,7 +14,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   useEvaluations,
   useParticipants,
-  useTemplate,
   type Evaluation,
 } from '@/db/hooks';
 import { colors, radii, spacing, type } from '@/design/tokens';
@@ -29,17 +28,15 @@ export default function EvaluationsTab() {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <Animated.View entering={FadeIn.duration(440)} style={styles.empty}>
-          <View style={styles.emptyIcon}>
-            {Platform.OS === 'ios' ? (
+          {Platform.OS === 'ios' && (
+            <View style={styles.emptyIcon}>
               <SymbolView
                 name="chart.dots.scatter"
                 tintColor={colors.textMute}
                 size={48}
               />
-            ) : (
-              <Text style={{ fontSize: 32 }}>📊</Text>
-            )}
-          </View>
+            </View>
+          )}
           <Text style={styles.emptyEyebrow}>Evaluations</Text>
           <Text style={styles.emptyHeadline}>Make your first ranking.</Text>
           <Text style={styles.emptyBody}>
@@ -88,11 +85,8 @@ function EvaluationRow({
   evaluation: Evaluation;
   index: number;
 }) {
-  const { data: template } = useTemplate(evaluation.originTemplateId ?? '');
   const { data: participants } = useParticipants(evaluation.id);
 
-  const emoji = template?.emoji || '✦';
-  const accent = template?.accent.start ?? colors.bgElev2;
   const total = participants?.length ?? 0;
   const active = participants?.filter((p) => !p.excluded).length ?? total;
   const subtitle = `${active} ${active === 1 ? 'person' : 'people'} · ${timeAgo(evaluation.updatedAt)}`;
@@ -102,9 +96,6 @@ function EvaluationRow({
       <Pressable
         onPress={() => router.push(`/evaluation/${evaluation.id}`)}
         style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-        <View style={[styles.emojiBubble, { backgroundColor: tint(accent) }]}>
-          <Text style={styles.emoji}>{emoji}</Text>
-        </View>
         <View style={styles.rowBody}>
           <Text style={styles.rowTitle} numberOfLines={1}>
             {evaluation.title}
@@ -117,14 +108,6 @@ function EvaluationRow({
       </Pressable>
     </Animated.View>
   );
-}
-
-// Render the template's accent at low opacity behind the emoji so each
-// row keeps the visual identity of its rubric without overwhelming.
-function tint(hex: string): string {
-  // Trust the input is one of our curated #RRGGBB accents.
-  if (hex.length !== 7 || !hex.startsWith('#')) return colors.bgElev2;
-  return `${hex}33`; // ~20% alpha
 }
 
 function timeAgo(ts: number): string {
@@ -215,16 +198,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     minHeight: 72,
   },
-  emojiBubble: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  emoji: { fontSize: 22 },
   rowBody: { flex: 1, gap: 2 },
   rowTitle: { ...type.h3, color: colors.text },
   rowSubtitle: { ...type.caption, color: colors.textDim },

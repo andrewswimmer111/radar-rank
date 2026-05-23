@@ -40,5 +40,11 @@ const styles = StyleSheet.create({
   },
   backText: { color: colors.text, fontSize: 18, lineHeight: 20 },
   title: { ...type.label, color: colors.textDim, flex: 1, textAlign: 'center' },
-  right: { width: 36, alignItems: 'flex-end' },
+  right: {
+    minWidth: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+  },
 });

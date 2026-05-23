@@ -65,9 +65,47 @@ export default function EvaluationDetail() {
   const [newParticipantName, setNewParticipantName] = useState('');
 
   const [sortMode, setSortMode] = useState<SortMode>({ kind: 'manual' });
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   useEffect(() => {
     setSortMode({ kind: 'manual' });
+    setSelectMode(false);
+    setSelected(new Set());
   }, [id]);
+
+  const enterSelectMode = () => {
+    Haptics.selectionAsync().catch(() => {});
+    setSelected(new Set());
+    setSelectMode(true);
+  };
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelected(new Set());
+  };
+  const toggleSelect = (participantId: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(participantId)) {
+        next.delete(participantId);
+        Haptics.selectionAsync().catch(() => {});
+        return next;
+      }
+      if (next.size >= 3) {
+        Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Warning,
+        ).catch(() => {});
+        return prev;
+      }
+      next.add(participantId);
+      Haptics.selectionAsync().catch(() => {});
+      return next;
+    });
+  };
+  const onCompare = () => {
+    if (selected.size < 2) return;
+    const idsParam = Array.from(selected).join(',');
+    router.push(`/evaluation/${id}/compare?ids=${idsParam}`);
+  };
 
   const participantList = participants ?? [];
   const categoryKeys = useMemo(
@@ -183,12 +221,40 @@ export default function EvaluationDetail() {
       <HeaderBar
         title="Evaluation"
         right={
-          <Pressable
-            onPress={onDeleteEvaluation}
-            hitSlop={10}
-            style={({ pressed }) => [styles.menuBtn, pressed && styles.pressed]}>
-            <Text style={styles.menuBtnText}>⋯</Text>
-          </Pressable>
+          selectMode ? (
+            <Pressable
+              onPress={exitSelectMode}
+              hitSlop={10}
+              style={({ pressed }) => [
+                styles.headerPill,
+                pressed && styles.pressed,
+              ]}>
+              <Text style={styles.headerPillText}>Cancel</Text>
+            </Pressable>
+          ) : (
+            <>
+              {participantList.length >= 2 && (
+                <Pressable
+                  onPress={enterSelectMode}
+                  hitSlop={10}
+                  style={({ pressed }) => [
+                    styles.headerPill,
+                    pressed && styles.pressed,
+                  ]}>
+                  <Text style={styles.headerPillText}>Compare</Text>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={onDeleteEvaluation}
+                hitSlop={10}
+                style={({ pressed }) => [
+                  styles.menuBtn,
+                  pressed && styles.pressed,
+                ]}>
+                <Text style={styles.menuBtnText}>⋯</Text>
+              </Pressable>
+            </>
+          )
         }
       />
       <KeyboardAvoidingView
@@ -198,7 +264,10 @@ export default function EvaluationDetail() {
         <ScrollView
           contentContainerStyle={[
             styles.scroll,
-            { paddingBottom: insets.bottom + spacing.xxl },
+            {
+              paddingBottom:
+                insets.bottom + (selectMode ? 96 : spacing.xxl),
+            },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
@@ -216,21 +285,28 @@ export default function EvaluationDetail() {
             <Text style={styles.lineage}>From {lineage}</Text>
           )}
 
-          <EvaluationSummary
-            participants={participantList}
-            categories={categories ?? []}
-            scores={scores ?? []}
-          />
+          {!selectMode && (
+            <EvaluationSummary
+              participants={participantList}
+              categories={categories ?? []}
+              scores={scores ?? []}
+            />
+          )}
 
           <View style={styles.participantsHeader}>
-            <Text style={styles.eyebrow}>Participants</Text>
+            <Text style={styles.eyebrow}>
+              {selectMode ? 'Pick 2–3 to compare' : 'Participants'}
+            </Text>
             <Text style={styles.participantsCount}>
-              {activeCount} active
-              {excludedCount > 0 ? ` · ${excludedCount} excluded` : ''}
+              {selectMode
+                ? `${selected.size} selected`
+                : `${activeCount} active${
+                    excludedCount > 0 ? ` · ${excludedCount} excluded` : ''
+                  }`}
             </Text>
           </View>
 
-          {participantList.length >= 2 && (
+          {!selectMode && participantList.length >= 2 && (
             <SortMenu
               mode={sortMode}
               categories={categories ?? []}
@@ -246,6 +322,9 @@ export default function EvaluationDetail() {
                 evaluationId={id}
                 ovr={ovrMap.get(p.id) ?? 0}
                 peerOvrs={peerOvrs}
+                selectMode={selectMode}
+                selected={selected.has(p.id)}
+                onToggleSelect={toggleSelect}
               />
             ))}
             {participantList.length === 0 && (
@@ -257,7 +336,7 @@ export default function EvaluationDetail() {
             )}
           </View>
 
-          <View style={styles.addRow}>
+          {!selectMode && <View style={styles.addRow}>
             <TextInput
               style={styles.addInput}
               value={newParticipantName}
@@ -286,9 +365,36 @@ export default function EvaluationDetail() {
                 Add
               </Text>
             </Pressable>
-          </View>
+          </View>}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {selectMode && (
+        <View
+          style={[
+            styles.compareFooter,
+            { paddingBottom: insets.bottom + spacing.lg },
+          ]}>
+          <Pressable
+            onPress={onCompare}
+            disabled={selected.size < 2}
+            style={({ pressed }) => [
+              styles.compareBtn,
+              selected.size < 2 && styles.compareBtnDisabled,
+              pressed && selected.size >= 2 && styles.pressed,
+            ]}>
+            <Text
+              style={[
+                styles.compareBtnText,
+                selected.size < 2 && styles.compareBtnTextDisabled,
+              ]}>
+              {selected.size < 2
+                ? `Select ${2 - selected.size} more`
+                : `Compare ${selected.size} selected`}
+            </Text>
+          </Pressable>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -298,14 +404,31 @@ function ParticipantRow({
   evaluationId,
   ovr,
   peerOvrs,
+  selectMode,
+  selected,
+  onToggleSelect,
 }: {
   participant: Participant;
   evaluationId: string;
   ovr: number;
   peerOvrs: number[];
+  selectMode: boolean;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
 }) {
-  const onPress = () =>
+  const onPress = () => {
+    if (selectMode) {
+      if (participant.excluded) {
+        Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Warning,
+        ).catch(() => {});
+        return;
+      }
+      onToggleSelect(participant.id);
+      return;
+    }
     router.push(`/evaluation/${evaluationId}/profile/${participant.id}`);
+  };
 
   const totalPeers = peerOvrs.length;
   const rank = participant.excluded ? null : rankAmong(ovr, peerOvrs);
@@ -358,23 +481,35 @@ function ParticipantRow({
   return (
     <Pressable
       onPress={onPress}
-      onLongPress={onLongPress}
+      onLongPress={selectMode ? undefined : onLongPress}
       delayLongPress={350}
       style={({ pressed }) => [
         styles.row,
         participant.excluded && styles.rowExcluded,
+        selectMode && selected && styles.rowSelected,
         pressed && styles.pressed,
       ]}>
-      <View
-        style={[
-          styles.colorChip,
-          { backgroundColor: participant.color ?? colors.bgElev2 },
-          participant.excluded && styles.colorChipExcluded,
-        ]}>
-        <Text style={styles.colorChipText}>
-          {participant.name.charAt(0).toUpperCase()}
-        </Text>
-      </View>
+      {selectMode ? (
+        <View
+          style={[
+            styles.checkbox,
+            selected && styles.checkboxSelected,
+            participant.excluded && styles.checkboxExcluded,
+          ]}>
+          {selected && <Text style={styles.checkboxMark}>✓</Text>}
+        </View>
+      ) : (
+        <View
+          style={[
+            styles.colorChip,
+            { backgroundColor: participant.color ?? colors.bgElev2 },
+            participant.excluded && styles.colorChipExcluded,
+          ]}>
+          <Text style={styles.colorChipText}>
+            {participant.name.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+      )}
       <View style={styles.rowMid}>
         <Text
           style={[styles.rowName, participant.excluded && styles.rowNameExcluded]}
@@ -395,7 +530,7 @@ function ParticipantRow({
           </Text>
         </View>
       )}
-      <Text style={styles.chevron}>›</Text>
+      {!selectMode && <Text style={styles.chevron}>›</Text>}
     </Pressable>
   );
 }
@@ -413,6 +548,57 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgElev,
   },
   menuBtnText: { ...type.h2, color: colors.text, lineHeight: 22 },
+  headerPill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    backgroundColor: colors.bgElev,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  headerPillText: { ...type.label, color: colors.text },
+  checkbox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bgElev2,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  checkboxSelected: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  checkboxExcluded: { opacity: 0.5 },
+  checkboxMark: { ...type.h3, color: colors.bg, lineHeight: 20 },
+  rowSelected: {
+    borderColor: colors.accent,
+    backgroundColor: colors.bgElev2,
+  },
+  compareFooter: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    backgroundColor: colors.bg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  compareBtn: {
+    paddingVertical: 14,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.accent,
+    minHeight: 48,
+  },
+  compareBtnDisabled: { backgroundColor: colors.bgElev2 },
+  compareBtnText: { ...type.h3, color: colors.bg },
+  compareBtnTextDisabled: { color: colors.textMute },
   scroll: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,

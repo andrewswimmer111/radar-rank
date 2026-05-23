@@ -14,6 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EvaluationSummary } from '@/components/EvaluationSummary';
@@ -315,7 +316,7 @@ export default function EvaluationDetail() {
           )}
 
           <View style={styles.list}>
-            {sortedParticipants.map((p) => (
+            {sortedParticipants.map((p, i) => (
               <ParticipantRow
                 key={p.id}
                 participant={p}
@@ -325,6 +326,7 @@ export default function EvaluationDetail() {
                 selectMode={selectMode}
                 selected={selected.has(p.id)}
                 onToggleSelect={toggleSelect}
+                visibleIndex={i}
               />
             ))}
             {participantList.length === 0 && (
@@ -370,7 +372,8 @@ export default function EvaluationDetail() {
       </KeyboardAvoidingView>
 
       {selectMode && (
-        <View
+        <Animated.View
+          entering={FadeInDown.duration(220)}
           style={[
             styles.compareFooter,
             { paddingBottom: insets.bottom + spacing.lg },
@@ -393,7 +396,7 @@ export default function EvaluationDetail() {
                 : `Compare ${selected.size} selected`}
             </Text>
           </Pressable>
-        </View>
+        </Animated.View>
       )}
     </SafeAreaView>
   );
@@ -407,6 +410,7 @@ function ParticipantRow({
   selectMode,
   selected,
   onToggleSelect,
+  visibleIndex,
 }: {
   participant: Participant;
   evaluationId: string;
@@ -415,6 +419,7 @@ function ParticipantRow({
   selectMode: boolean;
   selected: boolean;
   onToggleSelect: (id: string) => void;
+  visibleIndex: number;
 }) {
   const onPress = () => {
     if (selectMode) {
@@ -490,14 +495,15 @@ function ParticipantRow({
         pressed && styles.pressed,
       ]}>
       {selectMode ? (
-        <View
+        <Animated.View
+          entering={FadeIn.duration(180).delay(visibleIndex * 28)}
           style={[
             styles.checkbox,
             selected && styles.checkboxSelected,
             participant.excluded && styles.checkboxExcluded,
           ]}>
           {selected && <Text style={styles.checkboxMark}>✓</Text>}
-        </View>
+        </Animated.View>
       ) : (
         <View
           style={[

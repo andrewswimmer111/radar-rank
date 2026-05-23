@@ -5,7 +5,7 @@ import {
   Rect,
   vec,
 } from '@shopify/react-native-skia';
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 import {
   ActivityIndicator,
@@ -126,12 +126,15 @@ export default function CompareScreen() {
 
   if (!ready) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <HeaderBar title="Compare" />
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.textDim} />
-        </View>
-      </SafeAreaView>
+      <>
+        <Stack.Screen options={{ animation: 'slide_from_bottom' }} />
+        <SafeAreaView style={styles.safe} edges={['top']}>
+          <HeaderBar title="Compare" />
+          <View style={styles.center}>
+            <ActivityIndicator color={colors.textDim} />
+          </View>
+        </SafeAreaView>
+      </>
     );
   }
 
@@ -139,16 +142,19 @@ export default function CompareScreen() {
 
   if (!hasEnough) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <HeaderBar title={evaluation.title} />
-        <View style={styles.center}>
-          <Text style={styles.muted}>
-            {(selected?.length ?? 0) < 2
-              ? 'Pick at least two participants to compare.'
-              : 'Compare unavailable.'}
-          </Text>
-        </View>
-      </SafeAreaView>
+      <>
+        <Stack.Screen options={{ animation: 'slide_from_bottom' }} />
+        <SafeAreaView style={styles.safe} edges={['top']}>
+          <HeaderBar title={evaluation.title} />
+          <View style={styles.center}>
+            <Text style={styles.muted}>
+              {(selected?.length ?? 0) < 2
+                ? 'Pick at least two participants to compare.'
+                : 'Compare unavailable.'}
+            </Text>
+          </View>
+        </SafeAreaView>
+      </>
     );
   }
 
@@ -169,9 +175,11 @@ export default function CompareScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <HeaderBar title={evaluation.title} />
-      <ScrollView
+    <>
+      <Stack.Screen options={{ animation: 'slide_from_bottom' }} />
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <HeaderBar title={evaluation.title} />
+        <ScrollView
         contentContainerStyle={[
           styles.scroll,
           { paddingBottom: insets.bottom + spacing.xxl },
@@ -308,7 +316,8 @@ export default function CompareScreen() {
           })}
         </View>
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </>
   );
 }
 

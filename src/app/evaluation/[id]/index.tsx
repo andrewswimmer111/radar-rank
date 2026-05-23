@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { EvaluationSummary } from '@/components/EvaluationSummary';
 import { HeaderBar } from '@/components/HeaderBar';
 import {
   createParticipant,
@@ -179,6 +180,12 @@ export default function EvaluationDetail() {
           {lineage.length > 0 && (
             <Text style={styles.lineage}>From {lineage}</Text>
           )}
+
+          <EvaluationSummary
+            participants={participantList}
+            categories={categories ?? []}
+            scores={scores ?? []}
+          />
 
           <View style={styles.participantsHeader}>
             <Text style={styles.eyebrow}>Participants</Text>

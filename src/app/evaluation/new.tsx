@@ -20,6 +20,7 @@ import * as templateCategoriesDb from '@/db/templateCategories';
 import {
   snapshotEvaluation,
   useCollections,
+  useEvaluations,
   useTemplates,
   type CollectionWithCount,
   type Template,
@@ -30,6 +31,7 @@ export default function NewEvaluation() {
   const insets = useSafeAreaInsets();
   const { data: collections, loading: collectionsLoading } = useCollections();
   const { data: templates, loading: templatesLoading } = useTemplates();
+  const { data: existingEvaluations } = useEvaluations();
 
   const [collectionId, setCollectionId] = useState<string | null>(null);
   const [templateId, setTemplateId] = useState<string | null>(null);
@@ -38,15 +40,28 @@ export default function NewEvaluation() {
   const [busy, setBusy] = useState(false);
 
   // Auto-suggest title from the chosen pair, unless the user has typed
-  // their own.
+  // their own. Suffix " (2)", " (3)", ... when the base collides with an
+  // existing evaluation title so the user can see the final name up front.
   useEffect(() => {
     if (titleEdited) return;
     if (!collections || !templates) return;
     const c = collections.find((x) => x.id === collectionId);
     const t = templates.find((x) => x.id === templateId);
-    if (c && t) setTitle(`${c.name} × ${t.name}`);
-    else setTitle('');
-  }, [collectionId, templateId, collections, templates, titleEdited]);
+    if (c && t) {
+      const base = `${c.name} × ${t.name}`;
+      const existing = (existingEvaluations ?? []).map((e) => e.title);
+      setTitle(suffixToUnique(base, existing));
+    } else {
+      setTitle('');
+    }
+  }, [
+    collectionId,
+    templateId,
+    collections,
+    templates,
+    existingEvaluations,
+    titleEdited,
+  ]);
 
   if (collectionsLoading || templatesLoading) {
     return (
@@ -106,8 +121,13 @@ export default function NewEvaluation() {
         setBusy(false);
         return;
       }
+      // Belt-and-suspenders against duplicate titles: re-check at create
+      // time, since the user may have typed a custom name that collides,
+      // or another evaluation may have appeared since the title was set.
+      const existing = (existingEvaluations ?? []).map((e) => e.title);
+      const finalTitle = suffixToUnique(title.trim(), existing);
       const newId = await snapshotEvaluation({
-        title: title.trim(),
+        title: finalTitle,
         collectionId: collectionId!,
         people,
         templateId: templateId!,
@@ -281,6 +301,15 @@ function Radio({ selected }: { selected: boolean }) {
       {selected && <View style={styles.radioInner} />}
     </View>
   );
+}
+
+function suffixToUnique(base: string, existing: readonly string[]): string {
+  const taken = new Set(existing);
+  if (!taken.has(base)) return base;
+  for (let n = 2; ; n++) {
+    const candidate = `${base} (${n})`;
+    if (!taken.has(candidate)) return candidate;
+  }
 }
 
 const styles = StyleSheet.create({

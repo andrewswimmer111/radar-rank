@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -62,6 +62,35 @@ export default function EvaluationDetail() {
   useEffect(() => {
     if (evaluation) setTitleDraft(evaluation.title);
   }, [evaluation?.id, evaluation?.title]);
+
+  // Mirror the latest draft / saved title / id into refs so the unmount
+  // cleanup below can commit a pending edit without subscribing to those
+  // values and re-running on every keystroke.
+  const titleDraftRef = useRef(titleDraft);
+  const savedTitleRef = useRef(evaluation?.title ?? '');
+  const idRef = useRef(id);
+  useEffect(() => {
+    titleDraftRef.current = titleDraft;
+  }, [titleDraft]);
+  useEffect(() => {
+    savedTitleRef.current = evaluation?.title ?? '';
+  }, [evaluation?.title]);
+  useEffect(() => {
+    idRef.current = id;
+  }, [id]);
+
+  // Commit a pending title edit on unmount — covers back button, swipe-
+  // back gesture, hardware back, and any other pop path. Fire-and-forget;
+  // the DB write doesn't need the component to stay mounted.
+  useEffect(() => {
+    return () => {
+      const draft = titleDraftRef.current.trim();
+      const saved = savedTitleRef.current;
+      if (draft && draft !== saved) {
+        void updateEvaluation(idRef.current, { title: draft });
+      }
+    };
+  }, []);
 
   const [newParticipantName, setNewParticipantName] = useState('');
 

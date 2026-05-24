@@ -276,11 +276,16 @@ export default function EvaluationDetail() {
           <TextInput
             style={styles.titleInput}
             value={titleDraft}
-            onChangeText={setTitleDraft}
+            // Multiline so long titles like "Friends × Athleticism" wrap
+            // to a second line instead of clipping off the right edge.
+            // Strip newlines so the keyboard's return key can't slip a
+            // hard break into the stored title.
+            onChangeText={(v) => setTitleDraft(v.replace(/\n/g, ''))}
             onBlur={onTitleCommit}
             onSubmitEditing={onTitleCommit}
             returnKeyType="done"
             maxLength={60}
+            multiline
           />
           {lineage.length > 0 && (
             <Text style={styles.lineage}>From {lineage}</Text>
@@ -625,6 +630,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
+    textAlignVertical: 'top',
   },
   lineage: {
     ...type.caption,

@@ -59,10 +59,14 @@ export default function ProfileScreen() {
   const participant = participants?.find((p) => p.id === participantId);
   const cats = categories ?? [];
 
-  // Local slider state — sourced from DB on mount, written back on
-  // slider release. Stays the source of truth while the screen is open
-  // so dragging doesn't fight a pubsub refetch.
+  // Two parallel score states:
+  //   - `localScores` is the live slider value (updates every drag frame).
+  //     Drives the slider thumb and per-row value pill.
+  //   - `committedScores` advances only on slider release. Drives the
+  //     radar polygon and the OVR/grade chip so the graph doesn't churn
+  //     mid-scrub.
   const [localScores, setLocalScores] = useState<Record<string, number>>({});
+  const [committedScores, setCommittedScores] = useState<Record<string, number>>({});
   const initialized = useMemo(
     () =>
       Object.keys(localScores).length > 0 &&
@@ -78,11 +82,13 @@ export default function ProfileScreen() {
       if (s.participantId === participantId) next[s.categoryKey] = s.value;
     }
     setLocalScores(next);
+    setCommittedScores(next);
   }, [scoresFlat, participantId, cats, initialized]);
 
   // Reset local state when switching participants.
   useEffect(() => {
     setLocalScores({});
+    setCommittedScores({});
   }, [participantId]);
 
   const [busy, setBusy] = useState<'save' | 'share' | null>(null);
@@ -104,10 +110,10 @@ export default function ProfileScreen() {
   }, [participants, scoresFlat, cats]);
 
   const myOvr = useMemo(() => {
-    const vals = cats.map((c) => localScores[c.key] ?? 50);
+    const vals = cats.map((c) => committedScores[c.key] ?? 50);
     if (vals.length === 0) return 0;
     return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
-  }, [localScores, cats]);
+  }, [committedScores, cats]);
 
   const rank =
     participant && !participant.excluded ? rankAmong(myOvr, peerOvrs) : null;
@@ -130,8 +136,8 @@ export default function ProfileScreen() {
   }, [ready, id, sourceTemplate, evaluation, cats]);
 
   const legacyDraft = useMemo(
-    () => ({ templateId: id, name: participant?.name ?? '', scores: localScores }),
-    [id, participant?.name, localScores],
+    () => ({ templateId: id, name: participant?.name ?? '', scores: committedScores }),
+    [id, participant?.name, committedScores],
   );
 
   if (!ready || !legacyTemplate) {
@@ -150,11 +156,13 @@ export default function ProfileScreen() {
   };
 
   const onCommit = async (categoryKey: string, value: number) => {
+    const rounded = Math.round(value);
+    setCommittedScores((prev) => ({ ...prev, [categoryKey]: rounded }));
     await upsertScore({
       evaluationId: id,
       participantId: participantId,
       categoryKey,
-      value: Math.round(value),
+      value: rounded,
     });
   };
 

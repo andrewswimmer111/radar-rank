@@ -4,10 +4,8 @@ import {
   FractalNoise,
   Group,
   LinearGradient,
-  Path,
   RadialGradient,
   Rect,
-  Skia,
   Text as SkText,
   useFont,
   vec,
@@ -17,12 +15,7 @@ import { View } from 'react-native';
 
 import { RadarChart } from '@/components/RadarChart';
 import type { Template } from '@/data/types';
-import {
-  gradeFromScore,
-  overallScore,
-  percentileAmong,
-  profileArchetype,
-} from '@/lib/stats';
+import { profileArchetype } from '@/lib/stats';
 
 import { type Point } from './geometry';
 
@@ -37,19 +30,12 @@ export type RadarCardProps = {
   width: number;
   height: number;
   canvasRef?: RefObject<CanvasRef | null>;
-  // OVRs of every non-excluded peer in the same evaluation. When provided,
-  // the card renders a percentile chip next to OVR. Omitted = standalone
-  // card (no percentile).
-  peerOverallScores?: readonly number[];
 };
 
 const SIZES = {
   name: 80,
   eyebrow: 22,
   vertex: 20,
-  ovr: 56,
-  ovrLabel: 18,
-  grade: 38,
   footer: 16,
 } as const;
 
@@ -59,7 +45,6 @@ export function RadarCard({
   width,
   height,
   canvasRef,
-  peerOverallScores,
 }: RadarCardProps) {
   const heroFont = useFont(
     require('@expo-google-fonts/bricolage-grotesque/800ExtraBold/BricolageGrotesque_800ExtraBold.ttf'),
@@ -73,30 +58,12 @@ export function RadarCard({
     require('@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf'),
     SIZES.footer,
   );
-  const ovrFont = useFont(
-    require('@expo-google-fonts/bricolage-grotesque/800ExtraBold/BricolageGrotesque_800ExtraBold.ttf'),
-    SIZES.ovr,
-  );
-  const ovrLabelFont = useFont(
-    require('@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf'),
-    SIZES.ovrLabel,
-  );
-  const gradeFont = useFont(
-    require('@expo-google-fonts/bricolage-grotesque/700Bold/BricolageGrotesque_700Bold.ttf'),
-    SIZES.grade,
-  );
 
   const scale = width / LOGICAL_W;
 
   const layout = useMemo(() => computeLayout(), []);
 
-  const fontsReady =
-    heroFont &&
-    eyebrowFont &&
-    footerFont &&
-    ovrFont &&
-    ovrLabelFont &&
-    gradeFont;
+  const fontsReady = heroFont && eyebrowFont && footerFont;
 
   if (!fontsReady) {
     return <View style={{ width, height, backgroundColor: '#101018' }} />;
@@ -105,12 +72,6 @@ export function RadarCard({
   const upperName = (draft.name || ' ').toUpperCase();
   const eyebrowText = template.label.toUpperCase();
   const archetype = profileArchetype(template, draft.scores).toUpperCase();
-  const ovr = overallScore(template, draft.scores);
-  const grade = gradeFromScore(ovr);
-  const percentile =
-    peerOverallScores && peerOverallScores.length > 0
-      ? percentileAmong(ovr, peerOverallScores)
-      : null;
 
   return (
     <View
@@ -204,18 +165,6 @@ export function RadarCard({
             animateIn={!canvasRef}
           />
 
-          {/* Stats strip — OVR, grade, optional percentile. Sits above
-              the footer brand row. */}
-          <StatsStrip
-            layout={layout}
-            ovr={ovr}
-            grade={grade}
-            percentile={percentile}
-            ovrFont={ovrFont}
-            ovrLabelFont={ovrLabelFont}
-            gradeFont={gradeFont}
-          />
-
           {/* Footer brand — archetype · RADARRANK */}
           <FooterBrand
             layout={layout}
@@ -235,7 +184,6 @@ type Layout = {
   headerNameY: number;
   center: Point;
   radarRadius: number;
-  statsY: number;
   footerY: number;
 };
 
@@ -245,9 +193,8 @@ function computeLayout(): Layout {
     frameInset: 28,
     headerEyebrowY: 100,
     headerNameY: 184,
-    center: { x: LOGICAL_W / 2, y: 580 },
+    center: { x: LOGICAL_W / 2, y: 620 },
     radarRadius: 340,
-    statsY: 990,
     footerY: LOGICAL_H - 26,
   };
 }
@@ -313,113 +260,6 @@ function FooterBrand({
       font={footerFont}
       color="rgba(255,255,255,0.48)"
     />
-  );
-}
-
-function StatsStrip({
-  layout,
-  ovr,
-  grade,
-  percentile,
-  ovrFont,
-  ovrLabelFont,
-  gradeFont,
-}: {
-  layout: Layout;
-  ovr: number;
-  grade: string;
-  percentile: number | null;
-  ovrFont: SkiaFont;
-  ovrLabelFont: SkiaFont;
-  gradeFont: SkiaFont;
-}) {
-  // Two visual chunks:
-  //   [ OVR <huge number> ]    [ <grade>   <percentile> ]
-  // joined by a thin divider. Centered horizontally as one composite row.
-  const labelText = 'OVR';
-  const ovrText = String(ovr);
-  const percentileText = percentile != null ? `${percentile}p` : null;
-
-  const labelW = ovrLabelFont.measureText(labelText).width;
-  const ovrW = ovrFont.measureText(ovrText).width;
-  const gradeW = gradeFont.measureText(grade).width;
-  const percentileW = percentileText
-    ? ovrLabelFont.measureText(percentileText).width
-    : 0;
-
-  const leftGroupW = labelW + 12 + ovrW;
-  const rightInnerW =
-    percentileText != null ? gradeW + 16 + percentileW : gradeW;
-  const dividerW = 1;
-  const gapBetween = 28;
-  const totalW = leftGroupW + gapBetween + dividerW + gapBetween + rightInnerW;
-  const startX = (LOGICAL_W - totalW) / 2;
-
-  // Vertical alignment baseline: the OVR number is the tallest element.
-  // y in Skia text is the baseline; tune so the numbers feel centered.
-  const baseY = layout.statsY;
-  const labelBaselineY = baseY - 24; // small label sits above the big number
-  const ovrBaselineY = baseY + 10;
-  const gradeBaselineY = baseY + 2;
-  const percentileBaselineY = baseY + 2;
-
-  let cursor = startX;
-
-  return (
-    <Group>
-      <SkText
-        x={cursor}
-        y={labelBaselineY}
-        text={labelText}
-        font={ovrLabelFont}
-        color="rgba(255,255,255,0.72)"
-      />
-      <SkText
-        x={cursor + labelW + 12}
-        y={ovrBaselineY}
-        text={ovrText}
-        font={ovrFont}
-        color="#FFFFFF"
-      />
-      {(() => {
-        cursor = startX + leftGroupW + gapBetween;
-        const dividerX = cursor;
-        const dividerY1 = baseY - 26;
-        const dividerY2 = baseY + 16;
-        cursor = dividerX + dividerW + gapBetween;
-        return (
-          <Group key="divider-and-right">
-            <Path
-              path={(() => {
-                const p = Skia.Path.Make();
-                p.moveTo(dividerX, dividerY1);
-                p.lineTo(dividerX, dividerY2);
-                return p;
-              })()}
-              style="stroke"
-              strokeWidth={1.5}
-              color="rgba(255,255,255,0.40)"
-            />
-            <SkText
-              x={cursor}
-              y={gradeBaselineY}
-              text={grade}
-              font={gradeFont}
-              color="#FFFFFF"
-            />
-            {percentileText != null && (
-              <SkText
-                x={cursor + gradeW + 16}
-                y={percentileBaselineY}
-                text={percentileText}
-                font={ovrLabelFont}
-                color="rgba(255,255,255,0.78)"
-              />
-            )}
-          </Group>
-        );
-      })()}
-    </Group>
   );
 }
 

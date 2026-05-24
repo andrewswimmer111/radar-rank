@@ -1,7 +1,7 @@
 import { useCanvasRef } from '@shopify/react-native-skia';
 import * as Haptics from 'expo-haptics';
 import * as MediaLibrary from 'expo-media-library';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -113,8 +113,7 @@ export default function ProfileScreen() {
     participant && !participant.excluded ? rankAmong(myOvr, peerOvrs) : null;
   const totalPeers = peerOvrs.length;
 
-  // Legacy-shaped objects for the existing RadarCard. plan-14 refactors
-  // the card to accept DB-shaped data directly + a peerOverallScores prop.
+  // Legacy-shaped objects for the existing RadarCard.
   const legacyTemplate: LegacyTemplate | null = useMemo(() => {
     if (!ready) return null;
     return {
@@ -237,7 +236,6 @@ export default function ProfileScreen() {
               draft={legacyDraft}
               width={previewSize}
               height={previewSize}
-              peerOverallScores={peerOvrs}
             />
           </View>
 
@@ -280,7 +278,6 @@ export default function ProfileScreen() {
           width={EXPORT_WIDTH}
           height={EXPORT_WIDTH}
           canvasRef={exportRef}
-          peerOverallScores={peerOvrs}
         />
       </View>
 

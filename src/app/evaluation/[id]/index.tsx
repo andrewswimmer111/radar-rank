@@ -1,3 +1,4 @@
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -9,6 +10,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -24,6 +26,8 @@ import {
   createParticipant,
   deleteEvaluation,
   deleteParticipant,
+  shareEvaluation,
+  unshareEvaluation,
   updateEvaluation,
   updateParticipant,
   useCollection,
@@ -31,6 +35,8 @@ import {
   useEvaluationCategories,
   useParticipants,
   useScores,
+  useShare,
+  useSubmissionCount,
   useTemplate,
   type Participant,
 } from '@/db/hooks';
@@ -44,6 +50,11 @@ import {
   type SortMode,
 } from '@/lib/stats';
 
+// Placeholder host until plan-5 ships the actual voting web app.
+const VOTE_URL_BASE = 'https://radarrank.app/v';
+
+const voteUrl = (token: string) => `${VOTE_URL_BASE}/${token}`;
+
 export default function EvaluationDetail() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -51,6 +62,9 @@ export default function EvaluationDetail() {
   const { data: participants } = useParticipants(id);
   const { data: categories } = useEvaluationCategories(id);
   const { data: scores } = useScores(id);
+  const { data: share } = useShare(id);
+  const { data: voteCount } = useSubmissionCount(id);
+  const isShared = !!share;
   const { data: sourceCollection } = useCollection(
     evaluation?.originCollectionId ?? '',
   );
@@ -242,6 +256,105 @@ export default function EvaluationDetail() {
     );
   };
 
+  const onShare = () => {
+    Alert.alert(
+      'Share this evaluation?',
+      "You won't be able to add or remove participants until you unshare. Scores and excluded toggles still work.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Share',
+          onPress: async () => {
+            try {
+              const created = await shareEvaluation(id);
+              await Share.share({ message: voteUrl(created.voteToken) });
+            } catch (err) {
+              Alert.alert(
+                'Could not share',
+                err instanceof Error ? err.message : String(err),
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const onCopyLink = async () => {
+    if (!share) return;
+    await Clipboard.setStringAsync(voteUrl(share.voteToken));
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+      () => {},
+    );
+  };
+
+  const onUnshare = () => {
+    Alert.alert(
+      'Unshare this evaluation?',
+      'The share link will stop working and any submitted votes will be removed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unshare',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await unshareEvaluation(id);
+            } catch (err) {
+              Alert.alert(
+                'Could not unshare',
+                err instanceof Error ? err.message : String(err),
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const onOpenMenu = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const options = isShared
+      ? ['Copy link', 'Unshare', 'Delete evaluation', 'Cancel']
+      : ['Share evaluation', 'Delete evaluation', 'Cancel'];
+    const destructiveButtonIndex = isShared ? 2 : 1;
+    const cancelButtonIndex = options.length - 1;
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          destructiveButtonIndex,
+          cancelButtonIndex,
+          userInterfaceStyle: 'dark',
+        },
+        (index) => {
+          if (isShared) {
+            if (index === 0) void onCopyLink();
+            else if (index === 1) onUnshare();
+            else if (index === 2) onDeleteEvaluation();
+          } else {
+            if (index === 0) onShare();
+            else if (index === 1) onDeleteEvaluation();
+          }
+        },
+      );
+    } else {
+      const buttons = isShared
+        ? [
+            { text: 'Copy link', onPress: () => void onCopyLink() },
+            { text: 'Unshare', style: 'destructive' as const, onPress: onUnshare },
+            { text: 'Delete evaluation', style: 'destructive' as const, onPress: onDeleteEvaluation },
+            { text: 'Cancel', style: 'cancel' as const },
+          ]
+        : [
+            { text: 'Share evaluation', onPress: onShare },
+            { text: 'Delete evaluation', style: 'destructive' as const, onPress: onDeleteEvaluation },
+            { text: 'Cancel', style: 'cancel' as const },
+          ];
+      Alert.alert(evaluation?.title ?? 'Evaluation', undefined, buttons);
+    }
+  };
+
   const lineage = [sourceCollection?.name, sourceTemplate?.name]
     .filter(Boolean)
     .join(' · ');
@@ -275,7 +388,7 @@ export default function EvaluationDetail() {
                 </Pressable>
               )}
               <Pressable
-                onPress={onDeleteEvaluation}
+                onPress={onOpenMenu}
                 hitSlop={10}
                 style={({ pressed }) => [
                   styles.menuBtn,
@@ -320,6 +433,23 @@ export default function EvaluationDetail() {
             <Text style={styles.lineage}>From {lineage}</Text>
           )}
 
+          {isShared && !selectMode && (
+            <Pressable
+              onPress={onOpenMenu}
+              hitSlop={6}
+              style={({ pressed }) => [
+                styles.shareStatusRow,
+                pressed && styles.pressed,
+              ]}>
+              <View style={styles.shareStatusDot} />
+              <Text style={styles.shareStatusText}>
+                Shared · {voteCount ?? 0}{' '}
+                {voteCount === 1 ? 'vote' : 'votes'}
+              </Text>
+              <Text style={styles.shareStatusChevron}>›</Text>
+            </Pressable>
+          )}
+
           {!selectMode && (
             <EvaluationSummary
               participants={participantList}
@@ -361,6 +491,7 @@ export default function EvaluationDetail() {
                 selected={selected.has(p.id)}
                 onToggleSelect={toggleSelect}
                 visibleIndex={i}
+                shared={isShared}
               />
             ))}
             {participantList.length === 0 && (
@@ -372,7 +503,7 @@ export default function EvaluationDetail() {
             )}
           </View>
 
-          {!selectMode && <View style={styles.addRow}>
+          {!selectMode && !isShared && <View style={styles.addRow}>
             <TextInput
               style={styles.addInput}
               value={newParticipantName}
@@ -445,6 +576,7 @@ function ParticipantRow({
   selected,
   onToggleSelect,
   visibleIndex,
+  shared,
 }: {
   participant: Participant;
   evaluationId: string;
@@ -454,6 +586,7 @@ function ParticipantRow({
   selected: boolean;
   onToggleSelect: (id: string) => void;
   visibleIndex: number;
+  shared: boolean;
 }) {
   const onPress = () => {
     if (selectMode) {
@@ -494,26 +627,41 @@ function ParticipantRow({
   const onLongPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     const toggleLabel = participant.excluded ? 'Include' : 'Exclude';
+    // Soft freeze: Remove is dropped from the menu while the evaluation
+    // is shared, so the snapshot voters see can't shrink under them.
+    const iosOptions = shared
+      ? [toggleLabel, 'Cancel']
+      : [toggleLabel, 'Remove', 'Cancel'];
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
           title: participant.name,
-          options: [toggleLabel, 'Remove', 'Cancel'],
-          destructiveButtonIndex: 1,
-          cancelButtonIndex: 2,
+          options: iosOptions,
+          destructiveButtonIndex: shared ? undefined : 1,
+          cancelButtonIndex: iosOptions.length - 1,
           userInterfaceStyle: 'dark',
         },
         (index) => {
           if (index === 0) onToggleExcluded();
-          else if (index === 1) onConfirmRemove();
+          else if (!shared && index === 1) onConfirmRemove();
         },
       );
     } else {
-      Alert.alert(participant.name, undefined, [
-        { text: toggleLabel, onPress: onToggleExcluded },
-        { text: 'Remove', style: 'destructive', onPress: onConfirmRemove },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
+      const buttons = shared
+        ? [
+            { text: toggleLabel, onPress: onToggleExcluded },
+            { text: 'Cancel', style: 'cancel' as const },
+          ]
+        : [
+            { text: toggleLabel, onPress: onToggleExcluded },
+            {
+              text: 'Remove',
+              style: 'destructive' as const,
+              onPress: onConfirmRemove,
+            },
+            { text: 'Cancel', style: 'cancel' as const },
+          ];
+      Alert.alert(participant.name, undefined, buttons);
     }
   };
 
@@ -666,6 +814,33 @@ const styles = StyleSheet.create({
     color: colors.textMute,
     marginTop: spacing.sm,
     paddingHorizontal: spacing.sm,
+  },
+  shareStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.lg,
+    backgroundColor: colors.bgElev,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.accent,
+    gap: spacing.sm,
+  },
+  shareStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.accent,
+  },
+  shareStatusText: {
+    ...type.label,
+    color: colors.text,
+    flex: 1,
+  },
+  shareStatusChevron: {
+    ...type.h3,
+    color: colors.textMute,
   },
   participantsHeader: {
     flexDirection: 'row',

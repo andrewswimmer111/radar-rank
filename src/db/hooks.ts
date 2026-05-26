@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import * as cloudPush from '../cloud/push';
 import * as collectionsDb from './collections';
 import * as evaluationsDb from './evaluations';
 import * as evaluationCategoriesDb from './evaluationCategories';
 import * as participantsDb from './participants';
 import * as peopleDb from './people';
 import * as scoresDb from './scores';
+import * as sharesDb from './shares';
 import * as snapshotDb from './snapshot';
 import * as templatesDb from './templates';
 import * as templateCategoriesDb from './templateCategories';
+import * as votesDb from './votes';
 
 export type { Collection, CollectionWithCount } from './collections';
 export type { Evaluation } from './evaluations';
@@ -16,8 +19,10 @@ export type { EvaluationCategory } from './evaluationCategories';
 export type { Participant } from './participants';
 export type { Person } from './people';
 export type { Score } from './scores';
+export type { EvaluationShare } from './shares';
 export type { CreateTemplateInput, Template, TemplateAccent } from './templates';
 export type { TemplateCategory } from './templateCategories';
+export type { VoteSubmission, VoteScore } from './votes';
 
 // ---- pubsub --------------------------------------------------------------
 
@@ -62,6 +67,8 @@ const T = {
   participants: (evaluationId: string) => `participants:${evaluationId}`,
   evaluationCategories: (evaluationId: string) => `evaluationCategories:${evaluationId}`,
   scores: (evaluationId: string) => `scores:${evaluationId}`,
+  share: (evaluationId: string) => `share:${evaluationId}`,
+  voteSubmissions: (evaluationId: string) => `voteSubmissions:${evaluationId}`,
 };
 
 // ---- Generic resource hook -----------------------------------------------
@@ -179,6 +186,22 @@ export function useScores(evaluationId: string) {
     [evaluationId],
   );
   return useResource(T.scores(evaluationId), fetcher);
+}
+
+export function useShare(evaluationId: string) {
+  const fetcher = useCallback(
+    () => sharesDb.getShareForEvaluation(evaluationId),
+    [evaluationId],
+  );
+  return useResource(T.share(evaluationId), fetcher);
+}
+
+export function useSubmissionCount(evaluationId: string) {
+  const fetcher = useCallback(
+    () => votesDb.countSubmissions(evaluationId),
+    [evaluationId],
+  );
+  return useResource(T.voteSubmissions(evaluationId), fetcher);
 }
 
 // ---- Mutations (CRUD + invalidation) -------------------------------------
@@ -303,6 +326,14 @@ export async function updateEvaluation(id: string, patch: { title: string }) {
 }
 
 export async function deleteEvaluation(id: string) {
+  // Best-effort cloud cleanup. Don't block local delete on network errors —
+  // an orphaned cloud row stays RLS-protected and the user's local state
+  // still gets cleaned up.
+  try {
+    await cloudPush.unshareEvaluation(id);
+  } catch {
+    // swallow
+  }
   await evaluationsDb.deleteEvaluation(id);
   publish(
     T.evaluations,
@@ -310,6 +341,8 @@ export async function deleteEvaluation(id: string) {
     T.participants(id),
     T.evaluationCategories(id),
     T.scores(id),
+    T.share(id),
+    T.voteSubmissions(id),
   );
 }
 
@@ -370,4 +403,20 @@ export async function snapshotEvaluation(
   const id = await snapshotDb.snapshotEvaluation(input);
   publish(T.evaluations);
   return id;
+}
+
+// Sharing
+export async function shareEvaluation(evaluationId: string) {
+  const share = await cloudPush.pushEvaluation(evaluationId);
+  publish(T.share(evaluationId), T.evaluations);
+  return share;
+}
+
+export async function unshareEvaluation(evaluationId: string) {
+  await cloudPush.unshareEvaluation(evaluationId);
+  publish(
+    T.share(evaluationId),
+    T.voteSubmissions(evaluationId),
+    T.evaluations,
+  );
 }

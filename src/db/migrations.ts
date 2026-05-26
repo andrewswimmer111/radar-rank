@@ -94,7 +94,44 @@ const v1: Migration = {
   },
 };
 
-const MIGRATIONS: Migration[] = [v1];
+const v2: Migration = {
+  version: 2,
+  up: async (db) => {
+    await db.execAsync(`
+      CREATE TABLE evaluation_shares (
+        evaluation_id TEXT PRIMARY KEY NOT NULL
+          REFERENCES evaluations(id) ON DELETE CASCADE,
+        cloud_id TEXT NOT NULL,
+        view_token TEXT NOT NULL,
+        vote_token TEXT NOT NULL,
+        owner_install_id TEXT NOT NULL,
+        shared_at INTEGER NOT NULL,
+        last_pulled_at INTEGER
+      );
+
+      CREATE TABLE vote_submissions (
+        id TEXT PRIMARY KEY NOT NULL,
+        evaluation_id TEXT NOT NULL
+          REFERENCES evaluation_shares(evaluation_id) ON DELETE CASCADE,
+        voter_name TEXT NOT NULL,
+        submitted_at INTEGER NOT NULL
+      );
+      CREATE INDEX idx_vote_submissions_evaluation_id
+        ON vote_submissions(evaluation_id);
+
+      CREATE TABLE vote_scores (
+        submission_id TEXT NOT NULL
+          REFERENCES vote_submissions(id) ON DELETE CASCADE,
+        participant_id TEXT NOT NULL,
+        category_key TEXT NOT NULL,
+        value INTEGER NOT NULL CHECK (value BETWEEN 0 AND 100),
+        PRIMARY KEY (submission_id, participant_id, category_key)
+      );
+    `);
+  },
+};
+
+const MIGRATIONS: Migration[] = [v1, v2];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');

@@ -131,7 +131,19 @@ const v2: Migration = {
   },
 };
 
-const MIGRATIONS: Migration[] = [v1, v2];
+const v3: Migration = {
+  version: 3,
+  up: async (db) => {
+    await db.execAsync(`
+      CREATE TABLE app_state (
+        key TEXT PRIMARY KEY NOT NULL,
+        value TEXT NOT NULL
+      );
+    `);
+  },
+};
+
+const MIGRATIONS: Migration[] = [v1, v2, v3];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');

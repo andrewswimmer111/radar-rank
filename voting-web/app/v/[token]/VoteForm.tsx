@@ -1,0 +1,244 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+
+import { withVoteToken } from '@/lib/supabase';
+
+import styles from './styles.module.css';
+
+type SharedEvaluation = {
+  id: string;
+  title: string;
+  accent_start: string;
+  accent_end: string;
+  accent_glow: string;
+};
+
+type SharedParticipant = {
+  local_id: string;
+  name: string;
+  color: string | null;
+};
+
+type SharedCategory = {
+  key: string;
+  label: string;
+  hint: string | null;
+};
+
+type Props = {
+  voteToken: string;
+  evaluation: SharedEvaluation;
+  participants: SharedParticipant[];
+  categories: SharedCategory[];
+};
+
+type ScoreMap = Record<string, Record<string, number>>;
+
+const initialScores = (
+  participants: SharedParticipant[],
+  categories: SharedCategory[],
+): ScoreMap => {
+  const out: ScoreMap = {};
+  for (const p of participants) {
+    out[p.local_id] = {};
+    for (const c of categories) {
+      out[p.local_id][c.key] = 50;
+    }
+  }
+  return out;
+};
+
+export function VoteForm({
+  voteToken,
+  evaluation,
+  participants,
+  categories,
+}: Props) {
+  const [voterName, setVoterName] = useState('');
+  const [scores, setScores] = useState<ScoreMap>(() =>
+    initialScores(participants, categories),
+  );
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const gradient = useMemo(
+    () =>
+      `linear-gradient(135deg, ${evaluation.accent_start}, ${evaluation.accent_end})`,
+    [evaluation.accent_start, evaluation.accent_end],
+  );
+
+  const canSubmit = voterName.trim().length > 0 && !submitting;
+
+  const onChangeScore = (
+    participantId: string,
+    categoryKey: string,
+    value: number,
+  ) => {
+    setScores((prev) => ({
+      ...prev,
+      [participantId]: { ...prev[participantId], [categoryKey]: value },
+    }));
+  };
+
+  const onSubmit = async () => {
+    if (!canSubmit) return;
+    setSubmitting(true);
+    setSubmitError(null);
+
+    const flat: {
+      participant_local_id: string;
+      category_key: string;
+      value: number;
+    }[] = [];
+    for (const p of participants) {
+      for (const c of categories) {
+        flat.push({
+          participant_local_id: p.local_id,
+          category_key: c.key,
+          value: scores[p.local_id][c.key],
+        });
+      }
+    }
+
+    try {
+      const sb = withVoteToken(voteToken);
+      const { error } = await sb.rpc('submit_vote', {
+        p_voter_name: voterName.trim(),
+        p_scores: flat,
+      });
+      if (error) throw error;
+      setSubmitted(true);
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : 'Could not submit your scores. Please try again.',
+      );
+      setSubmitting(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <main className={styles.successWrap}>
+        <div className={styles.successCard}>
+          <div className={styles.successBadge} style={{ background: gradient }} />
+          <h1 className={styles.successTitle}>Thanks for voting</h1>
+          <p className={styles.successBody}>
+            Your scores were submitted. You can close this page.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className={styles.wrap}>
+      <header className={styles.header}>
+        <div className={styles.accentBar} style={{ background: gradient }} />
+        <p className={styles.eyebrow}>RadarRank · Vote</p>
+        <h1 className={styles.title}>{evaluation.title}</h1>
+        <p className={styles.subtitle}>
+          Score each participant on each category. 0 = lowest, 100 = highest.
+        </p>
+      </header>
+
+      <section className={styles.nameSection}>
+        <label className={styles.label} htmlFor="voter-name">
+          Your name
+        </label>
+        <input
+          id="voter-name"
+          className={styles.input}
+          value={voterName}
+          onChange={(e) => setVoterName(e.target.value)}
+          maxLength={40}
+          autoComplete="off"
+          autoCapitalize="words"
+          placeholder="So the creator knows who voted"
+        />
+      </section>
+
+      <section className={styles.participants}>
+        {participants.map((p) => (
+          <ParticipantCard
+            key={p.local_id}
+            participant={p}
+            categories={categories}
+            scores={scores[p.local_id] ?? {}}
+            onChangeScore={(catKey, val) => onChangeScore(p.local_id, catKey, val)}
+          />
+        ))}
+      </section>
+
+      {submitError && (
+        <div className={styles.errorBanner}>{submitError}</div>
+      )}
+
+      <div className={styles.submitWrap}>
+        <button
+          type="button"
+          className={styles.submitBtn}
+          disabled={!canSubmit}
+          onClick={onSubmit}
+          style={canSubmit ? { background: gradient } : undefined}>
+          {submitting ? 'Submitting…' : 'Submit scores'}
+        </button>
+      </div>
+    </main>
+  );
+}
+
+function ParticipantCard({
+  participant,
+  categories,
+  scores,
+  onChangeScore,
+}: {
+  participant: SharedParticipant;
+  categories: SharedCategory[];
+  scores: Record<string, number>;
+  onChangeScore: (categoryKey: string, value: number) => void;
+}) {
+  const initial = participant.name.charAt(0).toUpperCase();
+  return (
+    <article className={styles.card}>
+      <header className={styles.cardHeader}>
+        <div
+          className={styles.colorChip}
+          style={{
+            background: participant.color ?? 'var(--bg-elev-2)',
+          }}>
+          <span className={styles.colorChipText}>{initial}</span>
+        </div>
+        <h2 className={styles.cardTitle}>{participant.name}</h2>
+      </header>
+      <div className={styles.sliderList}>
+        {categories.map((c) => {
+          const value = scores[c.key] ?? 50;
+          return (
+            <div key={c.key} className={styles.sliderRow}>
+              <div className={styles.sliderRowHead}>
+                <span className={styles.sliderLabel}>{c.label}</span>
+                <span className={styles.sliderValue}>{value}</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={value}
+                onChange={(e) => onChangeScore(c.key, Number(e.target.value))}
+                className={styles.slider}
+                aria-label={`${participant.name} – ${c.label}`}
+              />
+              {c.hint && <p className={styles.sliderHint}>{c.hint}</p>}
+            </div>
+          );
+        })}
+      </div>
+    </article>
+  );
+}

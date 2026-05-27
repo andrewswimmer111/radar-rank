@@ -42,6 +42,7 @@ import {
   type Participant,
 } from '@/db/hooks';
 import { colors, radii, spacing, type } from '@/design/tokens';
+import { CONSENSUS_ID } from '@/lib/consensus';
 import { pickPersonColor } from '@/lib/personColors';
 import {
   compareParticipantsBy,
@@ -489,10 +490,13 @@ export default function EvaluationDetail() {
           )}
 
           <View style={styles.list}>
-            {!selectMode && (voteCount ?? 0) > 0 && (
+            {(voteCount ?? 0) > 0 && (
               <ConsensusRow
                 evaluationId={id}
                 voteCount={voteCount ?? 0}
+                selectMode={selectMode}
+                selected={selected.has(CONSENSUS_ID)}
+                onToggleSelect={toggleSelect}
               />
             )}
             {sortedParticipants.map((p, i) => (
@@ -741,26 +745,51 @@ function ParticipantRow({
 function ConsensusRow({
   evaluationId,
   voteCount,
+  selectMode,
+  selected,
+  onToggleSelect,
 }: {
   evaluationId: string;
   voteCount: number;
+  selectMode: boolean;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
 }) {
+  const onPress = () => {
+    if (selectMode) {
+      onToggleSelect(CONSENSUS_ID);
+      return;
+    }
+    router.push(`/evaluation/${evaluationId}/consensus`);
+  };
+
   return (
     <Pressable
-      onPress={() => router.push(`/evaluation/${evaluationId}/consensus`)}
+      onPress={onPress}
       style={({ pressed }) => [
         styles.row,
         styles.consensusRow,
+        selectMode && selected && styles.rowSelected,
         pressed && styles.pressed,
       ]}>
-      <View style={styles.consensusBadge} />
+      {selectMode ? (
+        <View
+          style={[
+            styles.checkbox,
+            selected && styles.checkboxSelected,
+          ]}>
+          {selected && <Text style={styles.checkboxMark}>✓</Text>}
+        </View>
+      ) : (
+        <View style={styles.consensusBadge} />
+      )}
       <View style={styles.rowMid}>
         <Text style={styles.rowName}>Consensus</Text>
         <Text style={styles.consensusSubtitle}>
           From {voteCount} {voteCount === 1 ? 'vote' : 'votes'}
         </Text>
       </View>
-      <Text style={styles.chevron}>›</Text>
+      {!selectMode && <Text style={styles.chevron}>›</Text>}
     </Pressable>
   );
 }

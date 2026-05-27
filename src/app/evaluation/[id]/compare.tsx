@@ -23,6 +23,7 @@ import {
 import { HeaderBar } from '@/components/HeaderBar';
 import { RadarChart, type RadarSeries } from '@/components/RadarChart';
 import {
+  useConsensus,
   useEvaluation,
   useEvaluationCategories,
   useParticipants,
@@ -30,6 +31,10 @@ import {
   type Participant,
 } from '@/db/hooks';
 import { colors, radii, shadows, spacing, type } from '@/design/tokens';
+import {
+  CONSENSUS_ID,
+  type ConsensusMap,
+} from '@/lib/consensus';
 import { pickPersonColor } from '@/lib/personColors';
 import { gradeFromScore } from '@/lib/stats';
 
@@ -48,19 +53,57 @@ export default function CompareScreen() {
   const { data: participants } = useParticipants(id);
   const { data: categories } = useEvaluationCategories(id);
   const { data: scoresFlat } = useScores(id);
+  const consensus = useConsensus(id);
 
   const selectedIds = useMemo(() => parseIds(ids), [ids]);
+
+  const cats = useMemo(
+    () => (categories ?? []).map((c) => ({ key: c.key, label: c.label })),
+    [categories],
+  );
+
+  // The Consensus profile is synthesized client-side: for each category,
+  // average the consensus mean across all real participants. Returned as
+  // a Participant-shaped object so the rest of this screen — chart, legend,
+  // diff bars — can treat it identically to a regular selection.
+  const consensusEntry = useMemo<{
+    participant: Participant;
+    scores: Record<string, number>;
+  } | null>(() => {
+    if (!consensus || consensus.size === 0 || !participants) return null;
+    const scores = buildConsensusProfile(
+      consensus,
+      participants,
+      cats.map((c) => c.key),
+    );
+    const synthetic: Participant = {
+      id: CONSENSUS_ID,
+      evaluationId: id,
+      name: 'Consensus',
+      color: colors.accent,
+      excluded: false,
+      position: -1,
+      originPersonId: null,
+    };
+    return { participant: synthetic, scores };
+  }, [consensus, participants, cats, id]);
 
   const selected = useMemo<Selected[] | null>(() => {
     if (!participants) return null;
     const byId = new Map(participants.map((p) => [p.id, p]));
     const out: Selected[] = [];
     selectedIds.forEach((pid, i) => {
+      if (pid === CONSENSUS_ID) {
+        if (consensusEntry) {
+          out.push({ participant: consensusEntry.participant, paletteIndex: i });
+        }
+        return;
+      }
       const p = byId.get(pid);
       if (p) out.push({ participant: p, paletteIndex: i });
     });
     return out;
-  }, [participants, selectedIds]);
+  }, [participants, selectedIds, consensusEntry]);
 
   const scoresByParticipant = useMemo(() => {
     const out = new Map<string, Record<string, number>>();
@@ -72,13 +115,11 @@ export default function CompareScreen() {
       }
       m[s.categoryKey] = s.value;
     }
+    if (consensusEntry) {
+      out.set(CONSENSUS_ID, consensusEntry.scores);
+    }
     return out;
-  }, [scoresFlat]);
-
-  const cats = useMemo(
-    () => (categories ?? []).map((c) => ({ key: c.key, label: c.label })),
-    [categories],
-  );
+  }, [scoresFlat, consensusEntry]);
 
   const topTrait = useMemo(() => {
     if (!selected || selected.length < 2 || cats.length === 0) return null;
@@ -328,6 +369,29 @@ function parseIds(raw: string | undefined): string[] {
     .map((s) => s.trim())
     .filter(Boolean)
     .slice(0, 3);
+}
+
+// Synthesize a single voter-consensus profile across the whole group: for
+// each category, mean of (consensus mean for that category over all real
+// participants). Categories with no consensus data fall back to 50 so the
+// radar polygon stays well-formed.
+function buildConsensusProfile(
+  consensus: ConsensusMap,
+  participants: Participant[],
+  categoryKeys: string[],
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const key of categoryKeys) {
+    const means: number[] = [];
+    for (const p of participants) {
+      const stat = consensus.get(p.id)?.get(key);
+      if (stat) means.push(stat.mean);
+    }
+    out[key] = means.length > 0
+      ? Math.round(means.reduce((a, b) => a + b, 0) / means.length)
+      : 50;
+  }
+  return out;
 }
 
 const styles = StyleSheet.create({

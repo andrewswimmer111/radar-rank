@@ -1,5 +1,10 @@
 import type { VoteScore, VoteSubmission } from '../db/votes';
 
+// Sentinel id for the synthetic Consensus profile in compare-mode
+// selections. Must not collide with real participant ids (those are
+// short base36 strings from genId).
+export const CONSENSUS_ID = '__consensus';
+
 export type ConsensusStat = {
   // Mean rounded to the nearest int — scores are 0..100 ints so the
   // displayed value should be too.

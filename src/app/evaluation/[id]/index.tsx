@@ -26,6 +26,7 @@ import {
   createParticipant,
   deleteEvaluation,
   deleteParticipant,
+  refreshSubmissions,
   shareEvaluation,
   unshareEvaluation,
   updateEvaluation,
@@ -65,6 +66,14 @@ export default function EvaluationDetail() {
   const { data: share } = useShare(id);
   const { data: voteCount } = useSubmissionCount(id);
   const isShared = !!share;
+
+  // Pull cached submissions on mount + whenever this evaluation's share
+  // identity changes (e.g. unshare → reshare rotates cloudId). Failures
+  // are non-fatal — the screen still works against whatever's cached.
+  useEffect(() => {
+    if (!share) return;
+    refreshSubmissions(id).catch(() => {});
+  }, [id, share?.cloudId]);
   const { data: sourceCollection } = useCollection(
     evaluation?.originCollectionId ?? '',
   );

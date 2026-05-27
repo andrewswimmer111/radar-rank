@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import * as cloudPull from '../cloud/pull';
 import * as cloudPush from '../cloud/push';
 import * as collectionsDb from './collections';
 import * as evaluationsDb from './evaluations';
@@ -419,4 +420,11 @@ export async function unshareEvaluation(evaluationId: string) {
     T.voteSubmissions(evaluationId),
     T.evaluations,
   );
+}
+
+export async function refreshSubmissions(evaluationId: string) {
+  await cloudPull.pullSubmissionsForEvaluation(evaluationId);
+  // share gets touched (last_pulled_at), submissions cache may have new
+  // rows — invalidate both so any mounted consumers refetch.
+  publish(T.voteSubmissions(evaluationId), T.share(evaluationId));
 }

@@ -489,6 +489,12 @@ export default function EvaluationDetail() {
           )}
 
           <View style={styles.list}>
+            {!selectMode && (voteCount ?? 0) > 0 && (
+              <ConsensusRow
+                evaluationId={id}
+                voteCount={voteCount ?? 0}
+              />
+            )}
             {sortedParticipants.map((p, i) => (
               <ParticipantRow
                 key={p.id}
@@ -732,6 +738,33 @@ function ParticipantRow({
   );
 }
 
+function ConsensusRow({
+  evaluationId,
+  voteCount,
+}: {
+  evaluationId: string;
+  voteCount: number;
+}) {
+  return (
+    <Pressable
+      onPress={() => router.push(`/evaluation/${evaluationId}/consensus`)}
+      style={({ pressed }) => [
+        styles.row,
+        styles.consensusRow,
+        pressed && styles.pressed,
+      ]}>
+      <View style={styles.consensusBadge} />
+      <View style={styles.rowMid}>
+        <Text style={styles.rowName}>Consensus</Text>
+        <Text style={styles.consensusSubtitle}>
+          From {voteCount} {voteCount === 1 ? 'vote' : 'votes'}
+        </Text>
+      </View>
+      <Text style={styles.chevron}>›</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -885,6 +918,22 @@ const styles = StyleSheet.create({
     minHeight: 64,
   },
   rowExcluded: { opacity: 0.5 },
+  consensusRow: {
+    backgroundColor: 'transparent',
+    borderColor: colors.accent,
+    borderWidth: 1.5,
+  },
+  consensusBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    backgroundColor: colors.accent,
+  },
+  consensusSubtitle: {
+    ...type.eyebrow,
+    color: colors.accent,
+    textTransform: 'uppercase',
+  },
   colorChip: {
     width: 40,
     height: 40,

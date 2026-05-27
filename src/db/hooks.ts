@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import * as cloudPull from '../cloud/pull';
 import * as cloudPush from '../cloud/push';
+import { aggregateConsensus, type ConsensusMap } from '../lib/consensus';
 import * as collectionsDb from './collections';
 import * as evaluationsDb from './evaluations';
 import * as evaluationCategoriesDb from './evaluationCategories';
@@ -203,6 +204,35 @@ export function useSubmissionCount(evaluationId: string) {
     [evaluationId],
   );
   return useResource(T.voteSubmissions(evaluationId), fetcher);
+}
+
+export function useVoteSubmissions(evaluationId: string) {
+  const fetcher = useCallback(
+    () => votesDb.listSubmissions(evaluationId),
+    [evaluationId],
+  );
+  return useResource(T.voteSubmissions(evaluationId), fetcher);
+}
+
+export function useVoteScores(evaluationId: string) {
+  const fetcher = useCallback(
+    () => votesDb.listScoresForEvaluation(evaluationId),
+    [evaluationId],
+  );
+  // Same invalidation topic as submissions — the vote cache moves atomically.
+  return useResource(T.voteSubmissions(evaluationId), fetcher);
+}
+
+// Derives consensus stats client-side from the vote cache. Returns null
+// until both underlying hooks have loaded so consumers don't render a
+// half-aggregated map.
+export function useConsensus(evaluationId: string): ConsensusMap | null {
+  const { data: subs } = useVoteSubmissions(evaluationId);
+  const { data: scores } = useVoteScores(evaluationId);
+  return useMemo(() => {
+    if (!subs || !scores) return null;
+    return aggregateConsensus(subs, scores);
+  }, [subs, scores]);
 }
 
 // ---- Mutations (CRUD + invalidation) -------------------------------------

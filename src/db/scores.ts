@@ -35,6 +35,12 @@ export async function upsertScore(input: Score): Promise<void> {
   );
 }
 
+export async function listAllScores(): Promise<Score[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<Row>('SELECT * FROM evaluation_scores');
+  return rows.map(fromRow);
+}
+
 export async function listScoresForEvaluation(
   evaluationId: string,
 ): Promise<Score[]> {

@@ -81,6 +81,12 @@ export async function deletePerson(id: string): Promise<void> {
   await db.runAsync('DELETE FROM people WHERE id = ?', [id]);
 }
 
+export async function listAllPeople(): Promise<Person[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<Row>('SELECT * FROM people');
+  return rows.map(fromRow);
+}
+
 export async function listPeopleForCollection(
   collectionId: string,
 ): Promise<Person[]> {

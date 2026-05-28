@@ -101,6 +101,12 @@ export async function deleteParticipant(id: string): Promise<void> {
   await db.runAsync('DELETE FROM evaluation_participants WHERE id = ?', [id]);
 }
 
+export async function listAllParticipants(): Promise<Participant[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<Row>('SELECT * FROM evaluation_participants');
+  return rows.map(fromRow);
+}
+
 export async function listParticipants(
   evaluationId: string,
 ): Promise<Participant[]> {

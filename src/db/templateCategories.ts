@@ -96,6 +96,12 @@ export async function deleteTemplateCategory(id: string): Promise<void> {
   await db.runAsync('DELETE FROM template_categories WHERE id = ?', [id]);
 }
 
+export async function listAllTemplateCategories(): Promise<TemplateCategory[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<Row>('SELECT * FROM template_categories');
+  return rows.map(fromRow);
+}
+
 export async function listTemplateCategories(
   templateId: string,
 ): Promise<TemplateCategory[]> {

@@ -54,6 +54,12 @@ export async function createEvaluationCategory(input: {
   };
 }
 
+export async function listAllEvaluationCategories(): Promise<EvaluationCategory[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<Row>('SELECT * FROM evaluation_categories');
+  return rows.map(fromRow);
+}
+
 export async function listEvaluationCategories(
   evaluationId: string,
 ): Promise<EvaluationCategory[]> {

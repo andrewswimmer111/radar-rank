@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import {
+  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -23,6 +24,7 @@ import {
   type Theme,
 } from '@/design/theme';
 import { radii, spacing, type } from '@/design/tokens';
+import { exportBackupToFile } from '@/lib/backup';
 
 export default function EvaluationsTab() {
   const insets = useSafeAreaInsets();
@@ -32,6 +34,15 @@ export default function EvaluationsTab() {
   const { data } = useEvaluations();
   const evaluations = data ?? [];
   const empty = evaluations.length === 0;
+
+  // TEMP(plan-4): manual backup trigger until plan-6 settings ships the real entry.
+  const onExport = async () => {
+    try {
+      await exportBackupToFile();
+    } catch (e) {
+      Alert.alert('Export failed', e instanceof Error ? e.message : String(e));
+    }
+  };
 
   if (empty) {
     return (
@@ -75,6 +86,13 @@ export default function EvaluationsTab() {
             <Text style={styles.newBtnText}>
               {themeName === 'dark' ? 'Light' : 'Dark'}
             </Text>
+          </Pressable>
+          {/* TEMP(plan-4): export trigger until plan-6 settings ships the real entry */}
+          <Pressable
+            onPress={onExport}
+            hitSlop={10}
+            style={({ pressed }) => [styles.newBtn, pressed && styles.pressed]}>
+            <Text style={styles.newBtnText}>Export</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push('/evaluation/new')}

@@ -64,6 +64,13 @@ export async function getCollection(id: string): Promise<Collection | null> {
   return row ? fromRow(row) : null;
 }
 
+// Plain rows (no people-count join), for full-database export.
+export async function listAllCollections(): Promise<Collection[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<Row>('SELECT * FROM collections');
+  return rows.map(fromRow);
+}
+
 export async function listCollections(): Promise<CollectionWithCount[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<RowWithCount>(`

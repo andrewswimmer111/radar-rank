@@ -1,11 +1,13 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, spacing, type } from '@/design/tokens';
+import { useThemedStyles, type Theme } from '@/design/theme';
+import { spacing, type } from '@/design/tokens';
 
 type Props = { title?: string; right?: React.ReactNode };
 
 export function HeaderBar({ title, right }: Props) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.bar}>
       <Pressable
@@ -22,7 +24,7 @@ export function HeaderBar({ title, right }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (t: Theme) => StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -36,10 +38,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 18,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
   },
-  backText: { color: colors.text, fontSize: 18, lineHeight: 20 },
-  title: { ...type.label, color: colors.textDim, flex: 1, textAlign: 'center' },
+  backText: { color: t.colors.text, fontSize: 18, lineHeight: 20 },
+  title: { ...type.label, color: t.colors.textDim, flex: 1, textAlign: 'center' },
   right: {
     minWidth: 36,
     flexDirection: 'row',

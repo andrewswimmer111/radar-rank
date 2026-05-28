@@ -8,6 +8,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorScreen } from '@/components/ErrorScreen';
 import { initDb } from '@/db';
+import { getAppState } from '@/db/appState';
+import {
+  isThemeName,
+  THEME_STATE_KEY,
+  ThemeProvider,
+  useTheme,
+  type ThemeName,
+} from '@/design/theme';
 import { colors } from '@/design/tokens';
 import { useAppFonts } from '@/design/useAppFonts';
 
@@ -34,16 +42,29 @@ export default function RootLayout() {
   const fontsLoaded = useAppFonts();
   const [dbState, setDbState] = useState<DbState>('loading');
   const [dbError, setDbError] = useState('');
+  const [themeName, setThemeName] = useState<ThemeName>('dark');
 
   const initialize = useCallback(() => {
     setDbState('loading');
-    initDb()
-      .then(() => setDbState('ready'))
-      .catch((e) => {
+    void (async () => {
+      try {
+        await initDb();
+      } catch (e) {
         console.error('[layout] DB init failed:', e);
         setDbError(e instanceof Error ? e.message : String(e));
         setDbState('error');
-      });
+        return;
+      }
+      // Load persisted theme before first paint so there's no flash. A read
+      // failure is non-fatal — we fall back to the default dark theme.
+      try {
+        const stored = await getAppState(THEME_STATE_KEY);
+        if (isThemeName(stored)) setThemeName(stored);
+      } catch {
+        // ignore
+      }
+      setDbState('ready');
+    })();
   }, []);
 
   useEffect(() => {
@@ -72,11 +93,11 @@ export default function RootLayout() {
     );
   }
 
-  return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <SafeAreaProvider>
-        <StatusBar style="light" />
-        {dbState === 'error' ? (
+  if (dbState === 'error') {
+    return (
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
+        <SafeAreaProvider>
+          <StatusBar style="light" />
           <ErrorScreen
             title="Something went wrong"
             message={
@@ -85,15 +106,31 @@ export default function RootLayout() {
             }
             onRetry={initialize}
           />
-        ) : (
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.bg },
-              animation: 'slide_from_right',
-            }}
-          />
-        )}
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    );
+  }
+
+  return (
+    <ThemeProvider initialName={themeName}>
+      <ThemedRoot />
+    </ThemeProvider>
+  );
+}
+
+function ThemedRoot() {
+  const theme = useTheme();
+  return (
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
+      <SafeAreaProvider>
+        <StatusBar style={theme.name === 'dark' ? 'light' : 'dark'} />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: theme.colors.bg },
+            animation: 'slide_from_right',
+          }}
+        />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

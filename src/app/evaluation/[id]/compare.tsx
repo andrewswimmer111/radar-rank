@@ -30,7 +30,11 @@ import {
   useScores,
   type Participant,
 } from '@/db/hooks';
-import { colors, radii, shadows, spacing, type } from '@/design/tokens';
+import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
+// `staticColors` is the fixed dark palette — used only for the radar chart
+// surface, which stays dark in both themes (it's the branded data-viz panel,
+// mirroring the exported card). All chrome uses the active theme.
+import { colors as staticColors, radii, spacing, type } from '@/design/tokens';
 import {
   CONSENSUS_ID,
   type ConsensusMap,
@@ -46,6 +50,8 @@ type Selected = { participant: Participant; paletteIndex: number };
 
 export default function CompareScreen() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { width: SCREEN_W } = useWindowDimensions();
   const { id, ids } = useLocalSearchParams<{ id: string; ids?: string }>();
 
@@ -80,7 +86,7 @@ export default function CompareScreen() {
       id: CONSENSUS_ID,
       evaluationId: id,
       name: 'Consensus',
-      color: colors.accent,
+      color: staticColors.accent,
       excluded: false,
       position: -1,
       originPersonId: null,
@@ -264,7 +270,7 @@ export default function CompareScreen() {
                 <LinearGradient
                   start={vec(0, 0)}
                   end={vec(LOGICAL, LOGICAL)}
-                  colors={[colors.bgElev2, colors.bgElev]}
+                  colors={[staticColors.bgElev2, staticColors.bgElev]}
                 />
               </Rect>
               <RadarChart
@@ -394,8 +400,8 @@ function buildConsensusProfile(
   return out;
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const makeStyles = (t: Theme) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: t.colors.bg },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -403,7 +409,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     gap: spacing.sm,
   },
-  muted: { ...type.body, color: colors.textDim, textAlign: 'center' },
+  muted: { ...type.body, color: t.colors.textDim, textAlign: 'center' },
   scroll: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
@@ -413,29 +419,29 @@ const styles = StyleSheet.create({
   chartCard: {
     borderRadius: radii.xl,
     overflow: 'hidden',
-    ...shadows.card,
+    ...t.shadows.card,
   },
   legend: { width: '100%', gap: spacing.sm },
   legendRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
   legendDot: { width: 16, height: 16, borderRadius: 8 },
-  legendName: { ...type.h3, color: colors.text, flex: 1 },
+  legendName: { ...type.h3, color: t.colors.text, flex: 1 },
   legendStats: {
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: spacing.sm,
   },
-  legendOvr: { ...type.metric, color: colors.text, fontSize: 20, lineHeight: 22 },
-  legendGrade: { ...type.label, color: colors.accent },
+  legendOvr: { ...type.metric, color: t.colors.text, fontSize: 20, lineHeight: 22 },
+  legendGrade: { ...type.label, color: t.colors.accent },
   callouts: {
     width: '100%',
     flexDirection: 'row',
@@ -443,40 +449,40 @@ const styles = StyleSheet.create({
   },
   calloutCell: {
     flex: 1,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
     gap: 2,
     minHeight: 76,
   },
   calloutEyebrow: {
     ...type.eyebrow,
-    color: colors.textMute,
+    color: t.colors.textMute,
     textTransform: 'uppercase',
   },
-  calloutValue: { ...type.h3, color: colors.text },
-  calloutSecondary: { ...type.caption, color: colors.textDim },
+  calloutValue: { ...type.h3, color: t.colors.text },
+  calloutSecondary: { ...type.caption, color: t.colors.textDim },
   diff: { width: '100%', gap: spacing.md },
   diffHeading: {
     ...type.eyebrow,
-    color: colors.textMute,
+    color: t.colors.textMute,
     textTransform: 'uppercase',
   },
   diffSection: {
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
     gap: spacing.sm,
   },
   diffCategory: {
     ...type.label,
-    color: colors.textDim,
+    color: t.colors.textDim,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -487,28 +493,28 @@ const styles = StyleSheet.create({
   },
   diffName: {
     ...type.body,
-    color: colors.textDim,
+    color: t.colors.textDim,
     width: 88,
   },
-  diffNameWinner: { color: colors.text, fontFamily: 'Inter_600SemiBold' },
+  diffNameWinner: { color: t.colors.text, fontFamily: 'Inter_600SemiBold' },
   diffBarTrack: {
     flex: 1,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.bgElev2,
+    backgroundColor: t.colors.bgElev2,
     overflow: 'hidden',
   },
   diffBarFill: { height: '100%', borderRadius: 4 },
   diffScore: {
     ...type.label,
-    color: colors.textDim,
+    color: t.colors.textDim,
     width: 28,
     textAlign: 'right',
   },
-  diffScoreWinner: { color: colors.text },
+  diffScoreWinner: { color: t.colors.text },
   diffCheck: {
     ...type.label,
-    color: colors.accent,
+    color: t.colors.accent,
     width: 14,
     textAlign: 'center',
   },

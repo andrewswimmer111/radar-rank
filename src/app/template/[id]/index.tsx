@@ -16,10 +16,13 @@ import {
   useTemplateCategories,
   type TemplateCategory,
 } from '@/db/hooks';
-import { colors, radii, spacing, type } from '@/design/tokens';
+import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
+import { radii, spacing, type } from '@/design/tokens';
 
 export default function TemplateView() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: template, loading } = useTemplate(id);
   const { data: categories } = useTemplateCategories(id);
@@ -119,6 +122,7 @@ function CategoryRow({
   category: TemplateCategory;
   index: number;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.catRow}>
       <Text style={styles.catNum}>{String(index + 1).padStart(2, '0')}</Text>
@@ -129,10 +133,10 @@ function CategoryRow({
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const makeStyles = (t: Theme) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: t.colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  muted: { ...type.body, color: colors.textDim },
+  muted: { ...type.body, color: t.colors.textDim },
   scroll: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
@@ -166,24 +170,24 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...type.eyebrow,
-    color: colors.textMute,
+    color: t.colors.textMute,
     textTransform: 'uppercase',
   },
-  sectionCaption: { ...type.caption, color: colors.textMute },
+  sectionCaption: { ...type.caption, color: t.colors.textMute },
   catList: { gap: spacing.sm },
   catRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
     gap: spacing.md,
   },
-  catNum: { ...type.eyebrow, color: colors.textMute, width: 24 },
-  catLabel: { ...type.h3, color: colors.text, flex: 1 },
+  catNum: { ...type.eyebrow, color: t.colors.textMute, width: 24 },
+  catLabel: { ...type.h3, color: t.colors.text, flex: 1 },
   footer: {
     position: 'absolute',
     left: 0,
@@ -191,16 +195,16 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
-    backgroundColor: colors.bg,
+    backgroundColor: t.colors.bg,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopColor: t.colors.border,
   },
   cta: {
     paddingVertical: spacing.lg,
     borderRadius: radii.lg,
     alignItems: 'center',
-    backgroundColor: colors.accent,
+    backgroundColor: t.colors.accent,
   },
-  ctaText: { ...type.h2, color: colors.bg },
+  ctaText: { ...type.h2, color: t.colors.onAccent },
   pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

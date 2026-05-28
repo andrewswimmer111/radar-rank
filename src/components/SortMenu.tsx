@@ -9,7 +9,13 @@ import {
   View,
 } from 'react-native';
 
-import { colors, radii, spacing, type } from '@/design/tokens';
+import {
+  useThemeController,
+  useThemedStyles,
+  type Theme,
+  type ThemeName,
+} from '@/design/theme';
+import { radii, spacing, type } from '@/design/tokens';
 import type { SortMode } from '@/lib/stats';
 
 type Props = {
@@ -19,11 +25,13 @@ type Props = {
 };
 
 export function SortMenu({ mode, categories, onChange }: Props) {
+  const { name } = useThemeController();
+  const styles = useThemedStyles(makeStyles);
   const label = modeLabel(mode, categories);
 
   const onPress = () => {
     Haptics.selectionAsync().catch(() => {});
-    openSortSheet({ categories, onChange });
+    openSortSheet({ categories, onChange, userInterfaceStyle: name });
   };
 
   return (
@@ -65,9 +73,11 @@ function modeLabel(
 function openSortSheet({
   categories,
   onChange,
+  userInterfaceStyle,
 }: {
   categories: readonly { key: string; label: string }[];
   onChange: (mode: SortMode) => void;
+  userInterfaceStyle: ThemeName;
 }) {
   const baseOptions = [
     'Manual',
@@ -88,7 +98,7 @@ function openSortSheet({
         title: 'Sort by',
         options,
         cancelButtonIndex: cancelIndex,
-        userInterfaceStyle: 'dark',
+        userInterfaceStyle,
       },
       (index) => {
         if (index === undefined || index === cancelIndex) return;
@@ -97,7 +107,7 @@ function openSortSheet({
         else if (index === 2) onChange({ kind: 'ovrDesc' });
         else if (index === 3) onChange({ kind: 'mostBalanced' });
         else if (index === 4 && showStrongest) {
-          openCategorySheet({ categories, onChange });
+          openCategorySheet({ categories, onChange, userInterfaceStyle });
         }
       },
     );
@@ -113,7 +123,8 @@ function openSortSheet({
       ? [
           {
             text: strongestLabel,
-            onPress: () => openCategorySheet({ categories, onChange }),
+            onPress: () =>
+              openCategorySheet({ categories, onChange, userInterfaceStyle }),
           },
         ]
       : []),
@@ -125,9 +136,11 @@ function openSortSheet({
 function openCategorySheet({
   categories,
   onChange,
+  userInterfaceStyle,
 }: {
   categories: readonly { key: string; label: string }[];
   onChange: (mode: SortMode) => void;
+  userInterfaceStyle: ThemeName;
 }) {
   if (categories.length === 0) return;
   const labels = categories.map((c) => c.label);
@@ -140,7 +153,7 @@ function openCategorySheet({
         title: 'Strongest in…',
         options,
         cancelButtonIndex: cancelIndex,
-        userInterfaceStyle: 'dark',
+        userInterfaceStyle,
       },
       (index) => {
         if (index === undefined || index === cancelIndex) return;
@@ -162,7 +175,7 @@ function openCategorySheet({
   Alert.alert('Strongest in…', undefined, buttons);
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (t: Theme) => StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'flex-end' },
   chip: {
     flexDirection: 'row',
@@ -172,8 +185,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: radii.pill,
   },
-  chipLabel: { ...type.caption, color: colors.textMute },
-  chipValue: { ...type.label, color: colors.text },
-  chipChevron: { ...type.label, color: colors.textMute, marginLeft: -2 },
+  chipLabel: { ...type.caption, color: t.colors.textMute },
+  chipValue: { ...type.label, color: t.colors.text },
+  chipChevron: { ...type.label, color: t.colors.textMute, marginLeft: -2 },
   pressed: { opacity: 0.7 },
 });

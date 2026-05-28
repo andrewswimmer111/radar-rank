@@ -3,7 +3,8 @@ import * as Haptics from 'expo-haptics';
 import { useCallback } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii, spacing, type } from '@/design/tokens';
+import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
+import { radii, spacing, type } from '@/design/tokens';
 
 type Props = {
   label: string;
@@ -14,6 +15,8 @@ type Props = {
 };
 
 export function SliderRow({ label, value, accent, onChange, onCommit }: Props) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const handleComplete = useCallback(
     (next: number) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -46,14 +49,14 @@ export function SliderRow({ label, value, accent, onChange, onCommit }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (t: Theme) => StyleSheet.create({
   row: { paddingVertical: spacing.sm },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  label: { ...type.h2, color: colors.text, flex: 1, paddingRight: spacing.md },
+  label: { ...type.h2, color: t.colors.text, flex: 1, paddingRight: spacing.md },
   pill: {
     minWidth: 48,
     paddingVertical: 4,

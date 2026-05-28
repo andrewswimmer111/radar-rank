@@ -10,6 +10,10 @@ export const colors = {
   textMute: '#5F5F70',
   accent: '#E8FF6B',
   accentSoft: '#C7E04A',
+  // Foreground (text/icon) color to use on top of the accent fill. The
+  // accent is a light lime, so this stays dark in both themes — don't use
+  // `bg` for on-accent text, since `bg` inverts to near-white in light mode.
+  onAccent: '#08080C',
   danger: '#FF6B6B',
   success: '#6BFFB1',
 } as const;

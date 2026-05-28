@@ -12,10 +12,13 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTemplates, type Template } from '@/db/hooks';
-import { colors, radii, spacing, type } from '@/design/tokens';
+import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
+import { radii, spacing, type } from '@/design/tokens';
 
 export default function TemplatesTab() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { data, loading, error } = useTemplates();
 
   if (loading && !data) {
@@ -96,6 +99,7 @@ function Section({
   caption: string;
   children: React.ReactNode;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
@@ -108,6 +112,7 @@ function Section({
 }
 
 function TemplateCard({ template, index }: { template: Template; index: number }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <Animated.View entering={FadeInDown.duration(360).delay(60 + index * 40)}>
       <Pressable
@@ -132,8 +137,8 @@ function TemplateCard({ template, index }: { template: Template; index: number }
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const makeStyles = (t: Theme) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: t.colors.bg },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorBox: {
     flex: 1,
@@ -142,8 +147,8 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     gap: spacing.sm,
   },
-  errorText: { ...type.h3, color: colors.text },
-  errorSub: { ...type.body, color: colors.textDim, textAlign: 'center' },
+  errorText: { ...type.h3, color: t.colors.text },
+  errorSub: { ...type.body, color: t.colors.textDim, textAlign: 'center' },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -152,25 +157,25 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
   },
-  title: { ...type.hero, color: colors.text },
+  title: { ...type.hero, color: t.colors.text },
   newBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: 8,
     borderRadius: radii.pill,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
-  newBtnText: { ...type.label, color: colors.text },
+  newBtnText: { ...type.label, color: t.colors.text },
   scroll: { paddingHorizontal: spacing.xl, gap: spacing.xxl },
   section: { gap: spacing.md },
   sectionHeader: { gap: 4 },
   sectionTitle: {
     ...type.eyebrow,
-    color: colors.accent,
+    color: t.colors.accent,
     textTransform: 'uppercase',
   },
-  sectionCaption: { ...type.caption, color: colors.textMute },
+  sectionCaption: { ...type.caption, color: t.colors.textMute },
   sectionBody: { gap: spacing.md },
   card: {
     borderRadius: radii.xl,
@@ -185,18 +190,18 @@ const styles = StyleSheet.create({
   cardName: { ...type.h2, color: '#fff' },
   cardBlurb: { ...type.body, color: 'rgba(255,255,255,0.86)' },
   emptyYours: {
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
   emptyYoursText: {
     ...type.body,
-    color: colors.textDim,
+    color: t.colors.textDim,
     textAlign: 'center',
   },
-  emptyYoursAccent: { color: colors.accent },
+  emptyYoursAccent: { color: t.colors.accent },
   pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

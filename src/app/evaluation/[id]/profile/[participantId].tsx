@@ -29,7 +29,8 @@ import {
   useScores,
   useTemplate,
 } from '@/db/hooks';
-import { colors, radii, shadows, spacing, type } from '@/design/tokens';
+import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
+import { radii, spacing, type } from '@/design/tokens';
 import { exportFilename, snapshotCanvasToFile } from '@/lib/exportCard';
 import { DEFAULT_ACCENT } from '@/lib/accentPresets';
 import {
@@ -42,6 +43,8 @@ const EXPORT_WIDTH = 1080;
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { width: SCREEN_W } = useWindowDimensions();
   const { id, participantId } = useLocalSearchParams<{
     id: string;
@@ -317,7 +320,7 @@ export default function ProfileScreen() {
             !!busy && styles.actionBusy,
           ]}>
           {busy === 'share' ? (
-            <ActivityIndicator color={colors.bg} />
+            <ActivityIndicator color={colors.onAccent} />
           ) : (
             <Text style={styles.actionPrimaryText}>Share</Text>
           )}
@@ -332,8 +335,8 @@ function describeError(err: unknown): string {
   return 'Unknown error.';
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const makeStyles = (t: Theme) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: t.colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: {
     paddingHorizontal: spacing.xl,
@@ -341,7 +344,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   previewWrap: { alignItems: 'center', gap: spacing.md },
-  cardShadow: { ...shadows.card, borderRadius: radii.xl },
+  cardShadow: { ...t.shadows.card, borderRadius: radii.xl },
   metaChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -349,22 +352,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     borderRadius: radii.pill,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
-  metaLabel: { ...type.eyebrow, color: colors.textMute },
-  metaValue: { ...type.h2, color: colors.text },
-  metaGrade: { ...type.h3, color: colors.accent, letterSpacing: 0 },
-  metaRank: { ...type.label, color: colors.text },
+  metaLabel: { ...type.eyebrow, color: t.colors.textMute },
+  metaValue: { ...type.h2, color: t.colors.text },
+  metaGrade: { ...type.h3, color: t.colors.accent, letterSpacing: 0 },
+  metaRank: { ...type.label, color: t.colors.text },
   metaDivider: {
     width: StyleSheet.hairlineWidth,
     height: 16,
-    backgroundColor: colors.border,
+    backgroundColor: t.colors.border,
   },
   eyebrow: {
     ...type.eyebrow,
-    color: colors.textMute,
+    color: t.colors.textMute,
     textTransform: 'uppercase',
     marginTop: spacing.md,
   },
@@ -373,11 +376,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: radii.pill,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
-  excludedText: { ...type.eyebrow, color: colors.textMute },
+  excludedText: { ...type.eyebrow, color: t.colors.textMute },
   offscreen: {
     position: 'absolute',
     top: -20000,
@@ -393,9 +396,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
     gap: spacing.sm,
-    backgroundColor: colors.bg,
+    backgroundColor: t.colors.bg,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopColor: t.colors.border,
   },
   actionGhost: {
     flex: 1,
@@ -403,22 +406,22 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
     minHeight: 48,
   },
-  actionGhostText: { ...type.h3, color: colors.text },
+  actionGhostText: { ...type.h3, color: t.colors.text },
   actionPrimary: {
     flex: 1.4,
     paddingVertical: 14,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.accent,
+    backgroundColor: t.colors.accent,
     minHeight: 48,
   },
-  actionPrimaryText: { ...type.h3, color: colors.bg },
+  actionPrimaryText: { ...type.h3, color: t.colors.onAccent },
   actionBusy: { opacity: 0.7 },
   pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

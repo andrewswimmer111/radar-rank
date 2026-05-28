@@ -13,10 +13,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { HeaderBar } from '@/components/HeaderBar';
 import { createCollection } from '@/db/hooks';
-import { colors, radii, spacing, type } from '@/design/tokens';
+import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
+import { radii, spacing, type } from '@/design/tokens';
 
 export default function NewCollection() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -76,8 +79,8 @@ export default function NewCollection() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const makeStyles = (t: Theme) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: t.colors.bg },
   body: {
     flex: 1,
     paddingHorizontal: spacing.xl,
@@ -86,36 +89,36 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     ...type.eyebrow,
-    color: colors.textMute,
+    color: t.colors.textMute,
     textTransform: 'uppercase',
   },
   input: {
     ...type.h1,
-    color: colors.text,
-    backgroundColor: colors.bgElev,
+    color: t.colors.text,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     marginTop: spacing.xs,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
-  hint: { ...type.body, color: colors.textDim, marginTop: spacing.xs },
+  hint: { ...type.body, color: t.colors.textDim, marginTop: spacing.xs },
   footer: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
-    backgroundColor: colors.bg,
+    backgroundColor: t.colors.bg,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopColor: t.colors.border,
   },
   cta: {
     paddingVertical: spacing.lg,
     borderRadius: radii.lg,
     alignItems: 'center',
-    backgroundColor: colors.accent,
+    backgroundColor: t.colors.accent,
   },
-  ctaDisabled: { backgroundColor: colors.bgElev2 },
-  ctaText: { ...type.h2, color: colors.bg },
-  ctaTextDisabled: { color: colors.textMute },
+  ctaDisabled: { backgroundColor: t.colors.bgElev2 },
+  ctaText: { ...type.h2, color: t.colors.onAccent },
+  ctaTextDisabled: { color: t.colors.textMute },
   pressed: { transform: [{ scale: 0.98 }] },
 });

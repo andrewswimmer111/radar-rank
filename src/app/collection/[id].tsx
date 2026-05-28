@@ -26,11 +26,14 @@ import {
   usePeopleForCollection,
   type Person,
 } from '@/db/hooks';
-import { colors, radii, spacing, type } from '@/design/tokens';
+import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
+import { radii, spacing, type } from '@/design/tokens';
 import { pickPersonColor } from '@/lib/personColors';
 
 export default function CollectionEditor() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: collection, loading } = useCollection(id);
   const { data: people } = usePeopleForCollection(id);
@@ -224,6 +227,8 @@ function PersonRow({
   isLast: boolean;
   onReorder: (direction: 'up' | 'down') => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(person.name);
 
@@ -325,19 +330,19 @@ function PersonRow({
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const makeStyles = (t: Theme) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: t.colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  missing: { ...type.body, color: colors.textDim },
+  missing: { ...type.body, color: t.colors.textDim },
   menuBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
   },
-  menuBtnText: { ...type.h2, color: colors.text, lineHeight: 22 },
+  menuBtnText: { ...type.h2, color: t.colors.text, lineHeight: 22 },
   scroll: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
@@ -345,20 +350,20 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     ...type.eyebrow,
-    color: colors.textMute,
+    color: t.colors.textMute,
     textTransform: 'uppercase',
   },
   nameInput: {
     ...type.h1,
-    color: colors.text,
-    backgroundColor: colors.bgElev,
+    color: t.colors.text,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     marginTop: spacing.xs,
     marginBottom: spacing.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
   peopleHeader: {
     flexDirection: 'row',
@@ -366,17 +371,17 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     marginTop: spacing.sm,
   },
-  peopleCount: { ...type.caption, color: colors.textMute },
+  peopleCount: { ...type.caption, color: t.colors.textMute },
   peopleList: { marginTop: spacing.sm, gap: spacing.sm },
   personRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
     minHeight: 56,
     gap: spacing.md,
   },
@@ -389,10 +394,10 @@ const styles = StyleSheet.create({
   },
   colorChipText: { ...type.h3, color: '#fff' },
   personNameWrap: { flex: 1 },
-  personName: { ...type.h3, color: colors.text },
+  personName: { ...type.h3, color: t.colors.text },
   personInput: {
     ...type.h3,
-    color: colors.text,
+    color: t.colors.text,
     flex: 1,
     paddingVertical: 0,
   },
@@ -403,11 +408,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bgElev2,
+    backgroundColor: t.colors.bgElev2,
   },
   iconBtnDisabled: { opacity: 0.35 },
-  iconText: { ...type.h3, color: colors.text },
-  iconTextDisabled: { color: colors.textMute },
+  iconText: { ...type.h3, color: t.colors.text },
+  iconTextDisabled: { color: t.colors.textMute },
   addRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -417,22 +422,22 @@ const styles = StyleSheet.create({
   addInput: {
     ...type.body,
     flex: 1,
-    color: colors.text,
-    backgroundColor: colors.bgElev,
+    color: t.colors.text,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
   addBtn: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: radii.lg,
-    backgroundColor: colors.accent,
+    backgroundColor: t.colors.accent,
   },
-  addBtnDisabled: { backgroundColor: colors.bgElev2 },
-  addBtnText: { ...type.h3, color: colors.bg },
-  addBtnTextDisabled: { color: colors.textMute },
+  addBtnDisabled: { backgroundColor: t.colors.bgElev2 },
+  addBtnText: { ...type.h3, color: t.colors.onAccent },
+  addBtnTextDisabled: { color: t.colors.textMute },
   pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

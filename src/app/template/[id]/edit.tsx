@@ -29,11 +29,14 @@ import {
   type TemplateCategory,
 } from '@/db/hooks';
 import { genId } from '@/db/util';
-import { colors, radii, spacing, type } from '@/design/tokens';
+import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
+import { radii, spacing, type } from '@/design/tokens';
 import { ACCENT_PRESETS, accentEquals } from '@/lib/accentPresets';
 
 export default function TemplateEditor() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: template, loading } = useTemplate(id);
   const { data: categories } = useTemplateCategories(id);
@@ -309,6 +312,7 @@ function Preview({
   name: string;
   accent: TemplateAccent;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <LinearGradient
       colors={[accent.start, accent.end]}
@@ -335,6 +339,8 @@ function CategoryRow({
   isLast: boolean;
   onReorder: (direction: 'up' | 'down') => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(category.label);
 
@@ -431,33 +437,33 @@ function CategoryRow({
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const makeStyles = (t: Theme) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: t.colors.bg },
   center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.lg,
   },
-  muted: { ...type.body, color: colors.textDim },
+  muted: { ...type.body, color: t.colors.textDim },
   backBtn: {
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
-  backBtnText: { ...type.label, color: colors.text },
+  backBtnText: { ...type.label, color: t.colors.text },
   menuBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
   },
-  menuBtnText: { ...type.h2, color: colors.text, lineHeight: 22 },
+  menuBtnText: { ...type.h2, color: t.colors.text, lineHeight: 22 },
   scroll: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
@@ -475,19 +481,19 @@ const styles = StyleSheet.create({
   previewName: { ...type.h1, color: '#fff', textAlign: 'center' },
   eyebrow: {
     ...type.eyebrow,
-    color: colors.textMute,
+    color: t.colors.textMute,
     textTransform: 'uppercase',
     marginTop: spacing.md,
   },
   input: {
     ...type.h3,
-    color: colors.text,
-    backgroundColor: colors.bgElev,
+    color: t.colors.text,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
     marginTop: spacing.xs,
   },
   blurbInput: { minHeight: 64, textAlignVertical: 'top' },
@@ -498,7 +504,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  swatchOuterActive: { borderColor: colors.accent },
+  swatchOuterActive: { borderColor: t.colors.accent },
   swatchInner: {
     width: 56,
     height: 40,
@@ -510,39 +516,39 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     marginTop: spacing.lg,
   },
-  catsCount: { ...type.caption, color: colors.textMute },
+  catsCount: { ...type.caption, color: t.colors.textMute },
   catList: { marginTop: spacing.sm, gap: spacing.sm },
   catsEmpty: {
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
   catsEmptyText: {
     ...type.body,
-    color: colors.textDim,
+    color: t.colors.textDim,
     textAlign: 'center',
   },
   catRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
     minHeight: 56,
     gap: spacing.md,
   },
-  catNum: { ...type.eyebrow, color: colors.textMute, width: 24 },
+  catNum: { ...type.eyebrow, color: t.colors.textMute, width: 24 },
   catLabelWrap: { flex: 1 },
-  catLabel: { ...type.h3, color: colors.text },
+  catLabel: { ...type.h3, color: t.colors.text },
   catInput: {
     ...type.h3,
-    color: colors.text,
+    color: t.colors.text,
     flex: 1,
     paddingVertical: 0,
   },
@@ -553,11 +559,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bgElev2,
+    backgroundColor: t.colors.bgElev2,
   },
   iconBtnDisabled: { opacity: 0.35 },
-  iconText: { ...type.h3, color: colors.text },
-  iconTextDisabled: { color: colors.textMute },
+  iconText: { ...type.h3, color: t.colors.text },
+  iconTextDisabled: { color: t.colors.textMute },
   addRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -567,22 +573,22 @@ const styles = StyleSheet.create({
   addInput: {
     ...type.body,
     flex: 1,
-    color: colors.text,
-    backgroundColor: colors.bgElev,
+    color: t.colors.text,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
   addBtn: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: radii.lg,
-    backgroundColor: colors.accent,
+    backgroundColor: t.colors.accent,
   },
-  addBtnDisabled: { backgroundColor: colors.bgElev2 },
-  addBtnText: { ...type.h3, color: colors.bg },
-  addBtnTextDisabled: { color: colors.textMute },
+  addBtnDisabled: { backgroundColor: t.colors.bgElev2 },
+  addBtnText: { ...type.h3, color: t.colors.onAccent },
+  addBtnTextDisabled: { color: t.colors.textMute },
   pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

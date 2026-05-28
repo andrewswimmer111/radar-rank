@@ -2,7 +2,8 @@ import { Tabs } from 'expo-router';
 import { type SFSymbol, SymbolView } from 'expo-symbols';
 import { Platform, StyleSheet, Text } from 'react-native';
 
-import { colors, type } from '@/design/tokens';
+import { useTheme } from '@/design/theme';
+import { type } from '@/design/tokens';
 
 function TabIcon({
   name,
@@ -24,6 +25,7 @@ function TabIcon({
 }
 
 export default function TabsLayout() {
+  const { colors } = useTheme();
   return (
     <Tabs
       screenOptions={{

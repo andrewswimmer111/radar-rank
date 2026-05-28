@@ -25,10 +25,13 @@ import {
   type CollectionWithCount,
   type Template,
 } from '@/db/hooks';
-import { colors, radii, spacing, type } from '@/design/tokens';
+import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
+import { radii, spacing, type } from '@/design/tokens';
 
 export default function NewEvaluation() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { data: collections, loading: collectionsLoading } = useCollections();
   const { data: templates, loading: templatesLoading } = useTemplates();
   const { data: existingEvaluations } = useEvaluations();
@@ -203,7 +206,7 @@ export default function NewEvaluation() {
             pressed && valid && styles.pressed,
           ]}>
           {busy ? (
-            <ActivityIndicator color={colors.bg} />
+            <ActivityIndicator color={colors.onAccent} />
           ) : (
             <Text style={[styles.ctaText, !valid && styles.ctaTextDisabled]}>
               Create evaluation
@@ -222,6 +225,7 @@ function Section({
   title: string;
   children: React.ReactNode;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -239,6 +243,7 @@ function CollectionPickRow({
   selected: boolean;
   onPress: () => void;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <Pressable
       onPress={onPress}
@@ -268,6 +273,7 @@ function TemplatePickRow({
   selected: boolean;
   onPress: () => void;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <Pressable
       onPress={onPress}
@@ -296,6 +302,7 @@ function TemplatePickRow({
 }
 
 function Radio({ selected }: { selected: boolean }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={[styles.radio, selected && styles.radioSelected]}>
       {selected && <View style={styles.radioInner} />}
@@ -312,8 +319,8 @@ function suffixToUnique(base: string, existing: readonly string[]): string {
   }
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const makeStyles = (t: Theme) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: t.colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   missingBox: {
     flex: 1,
@@ -322,10 +329,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     gap: spacing.sm,
   },
-  missingTitle: { ...type.h1, color: colors.text, textAlign: 'center' },
+  missingTitle: { ...type.h1, color: t.colors.text, textAlign: 'center' },
   missingBody: {
     ...type.body,
-    color: colors.textDim,
+    color: t.colors.textDim,
     textAlign: 'center',
     maxWidth: 320,
     marginBottom: spacing.lg,
@@ -334,9 +341,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: colors.accent,
+    backgroundColor: t.colors.accent,
   },
-  missingCtaText: { ...type.h3, color: colors.bg },
+  missingCtaText: { ...type.h3, color: t.colors.onAccent },
   scroll: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
@@ -345,7 +352,7 @@ const styles = StyleSheet.create({
   section: { gap: spacing.sm },
   sectionTitle: {
     ...type.eyebrow,
-    color: colors.accent,
+    color: t.colors.accent,
     textTransform: 'uppercase',
   },
   sectionBody: { gap: spacing.sm },
@@ -353,16 +360,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
-  pickRowSelected: { borderColor: colors.accent, borderWidth: 1 },
-  pickName: { ...type.h3, color: colors.text },
-  pickMeta: { ...type.caption, color: colors.textDim, marginTop: 2 },
+  pickRowSelected: { borderColor: t.colors.accent, borderWidth: 1 },
+  pickName: { ...type.h3, color: t.colors.text },
+  pickMeta: { ...type.caption, color: t.colors.textDim, marginTop: 2 },
   tmplAccent: {
     width: 6,
     height: 40,
@@ -373,26 +380,26 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioSelected: { borderColor: colors.accent },
+  radioSelected: { borderColor: t.colors.accent },
   radioInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.accent,
+    backgroundColor: t.colors.accent,
   },
   titleInput: {
     ...type.h2,
-    color: colors.text,
-    backgroundColor: colors.bgElev,
+    color: t.colors.text,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
   footer: {
     position: 'absolute',
@@ -401,20 +408,20 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
-    backgroundColor: colors.bg,
+    backgroundColor: t.colors.bg,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopColor: t.colors.border,
   },
   cta: {
     paddingVertical: spacing.lg,
     borderRadius: radii.lg,
     alignItems: 'center',
-    backgroundColor: colors.accent,
+    backgroundColor: t.colors.accent,
     minHeight: 56,
     justifyContent: 'center',
   },
-  ctaDisabled: { backgroundColor: colors.bgElev2 },
-  ctaText: { ...type.h2, color: colors.bg },
-  ctaTextDisabled: { color: colors.textMute },
+  ctaDisabled: { backgroundColor: t.colors.bgElev2 },
+  ctaText: { ...type.h2, color: t.colors.onAccent },
+  ctaTextDisabled: { color: t.colors.textMute },
   pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

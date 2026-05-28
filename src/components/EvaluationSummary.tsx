@@ -6,7 +6,8 @@ import type {
   Participant,
   Score,
 } from '@/db/hooks';
-import { colors, radii, spacing, type } from '@/design/tokens';
+import { useThemedStyles, type Theme } from '@/design/theme';
+import { radii, spacing, type } from '@/design/tokens';
 import {
   categoryMeans,
   mostBalancedParticipant,
@@ -22,6 +23,7 @@ type Props = {
 };
 
 export function EvaluationSummary({ participants, categories, scores }: Props) {
+  const styles = useThemedStyles(makeStyles);
   const active = participants.filter((p) => !p.excluded);
   if (active.length < 2) return null;
   if (scores.length === 0) return null;
@@ -88,6 +90,7 @@ function Cell({
   value: string;
   secondary?: string;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.cell}>
       <Text style={styles.cellEyebrow}>{label.toUpperCase()}</Text>
@@ -103,31 +106,31 @@ function Cell({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (t: Theme) => StyleSheet.create({
   wrap: { gap: spacing.sm, marginTop: spacing.xl },
   eyebrow: {
     ...type.eyebrow,
-    color: colors.textMute,
+    color: t.colors.textMute,
     textTransform: 'uppercase',
   },
   rows: { gap: spacing.sm },
   row: { flexDirection: 'row', gap: spacing.sm },
   cell: {
     flex: 1,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
     gap: 2,
     minHeight: 76,
   },
   cellEyebrow: {
     ...type.eyebrow,
-    color: colors.textMute,
+    color: t.colors.textMute,
     textTransform: 'uppercase',
   },
-  cellValue: { ...type.h2, color: colors.text },
-  cellSecondary: { ...type.caption, color: colors.textDim },
+  cellValue: { ...type.h2, color: t.colors.text },
+  cellSecondary: { ...type.caption, color: t.colors.textDim },
 });

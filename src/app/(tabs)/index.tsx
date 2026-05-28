@@ -16,10 +16,19 @@ import {
   useParticipants,
   type Evaluation,
 } from '@/db/hooks';
-import { colors, radii, spacing, type } from '@/design/tokens';
+import {
+  useTheme,
+  useThemeController,
+  useThemedStyles,
+  type Theme,
+} from '@/design/theme';
+import { radii, spacing, type } from '@/design/tokens';
 
 export default function EvaluationsTab() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const { name: themeName, setTheme } = useThemeController();
+  const styles = useThemedStyles(makeStyles);
   const { data } = useEvaluations();
   const evaluations = data ?? [];
   const empty = evaluations.length === 0;
@@ -57,12 +66,23 @@ export default function EvaluationsTab() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>Evaluations</Text>
-        <Pressable
-          onPress={() => router.push('/evaluation/new')}
-          hitSlop={10}
-          style={({ pressed }) => [styles.newBtn, pressed && styles.pressed]}>
-          <Text style={styles.newBtnText}>+ New</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          {/* TEMP(plan-3): theme toggle until plan-6 settings ships the real switcher */}
+          <Pressable
+            onPress={() => setTheme(themeName === 'dark' ? 'light' : 'dark')}
+            hitSlop={10}
+            style={({ pressed }) => [styles.newBtn, pressed && styles.pressed]}>
+            <Text style={styles.newBtnText}>
+              {themeName === 'dark' ? 'Light' : 'Dark'}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/evaluation/new')}
+            hitSlop={10}
+            style={({ pressed }) => [styles.newBtn, pressed && styles.pressed]}>
+            <Text style={styles.newBtnText}>+ New</Text>
+          </Pressable>
+        </View>
       </View>
       <ScrollView
         contentContainerStyle={[
@@ -85,6 +105,7 @@ function EvaluationRow({
   evaluation: Evaluation;
   index: number;
 }) {
+  const styles = useThemedStyles(makeStyles);
   const { data: participants } = useParticipants(evaluation.id);
 
   const total = participants?.length ?? 0;
@@ -126,8 +147,8 @@ function timeAgo(ts: number): string {
   return `${mo}mo ago`;
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const makeStyles = (t: Theme) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: t.colors.bg },
   empty: {
     flex: 1,
     alignItems: 'center',
@@ -139,22 +160,22 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
   emptyEyebrow: {
     ...type.eyebrow,
-    color: colors.accent,
+    color: t.colors.accent,
     textTransform: 'uppercase',
   },
-  emptyHeadline: { ...type.hero, color: colors.text, textAlign: 'center' },
+  emptyHeadline: { ...type.hero, color: t.colors.text, textAlign: 'center' },
   emptyBody: {
     ...type.body,
-    color: colors.textDim,
+    color: t.colors.textDim,
     textAlign: 'center',
     maxWidth: 320,
     marginTop: spacing.xs,
@@ -164,9 +185,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: colors.accent,
+    backgroundColor: t.colors.accent,
   },
-  ctaText: { ...type.h3, color: colors.bg },
+  ctaText: { ...type.h3, color: t.colors.onAccent },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -175,32 +196,33 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
   },
-  title: { ...type.hero, color: colors.text },
+  title: { ...type.hero, color: t.colors.text },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   newBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: 8,
     borderRadius: radii.pill,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
-  newBtnText: { ...type.label, color: colors.text },
+  newBtnText: { ...type.label, color: t.colors.text },
   list: { paddingHorizontal: spacing.xl, gap: spacing.md },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
     gap: spacing.md,
     minHeight: 72,
   },
   rowBody: { flex: 1, gap: 2 },
-  rowTitle: { ...type.h3, color: colors.text },
-  rowSubtitle: { ...type.caption, color: colors.textDim },
-  chevron: { ...type.h2, color: colors.textMute },
+  rowTitle: { ...type.h3, color: t.colors.text },
+  rowSubtitle: { ...type.caption, color: t.colors.textDim },
+  chevron: { ...type.h2, color: t.colors.textMute },
   pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

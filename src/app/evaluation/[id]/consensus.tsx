@@ -18,11 +18,14 @@ import {
   useSubmissionCount,
   type Participant,
 } from '@/db/hooks';
-import { colors, radii, spacing, type } from '@/design/tokens';
+import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
+import { radii, spacing, type } from '@/design/tokens';
 import type { ConsensusMap } from '@/lib/consensus';
 
 export default function ConsensusScreen() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const { data: evaluation, loading } = useEvaluation(id);
@@ -114,6 +117,8 @@ function ConsensusListRow({
   consensus: ConsensusMap | null;
   categoryKeys: string[];
 }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const inner = consensus?.get(participant.id) ?? null;
   const ovr = consensusOvr(participant.id, consensus, categoryKeys);
   // Mean of per-category population variances — single dispersion summary
@@ -178,8 +183,8 @@ function consensusOvr(
   return Math.round(means.reduce((a, b) => a + b, 0) / means.length);
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const makeStyles = (t: Theme) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: t.colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: {
     paddingHorizontal: spacing.xl,
@@ -188,26 +193,26 @@ const styles = StyleSheet.create({
   },
   title: {
     ...type.hero,
-    color: colors.text,
+    color: t.colors.text,
     fontSize: 30,
     lineHeight: 34,
   },
   subtitle: {
     ...type.body,
-    color: colors.textDim,
+    color: t.colors.textDim,
     marginTop: spacing.xs,
   },
   empty: {
     marginTop: spacing.xl,
     padding: spacing.lg,
     borderRadius: radii.lg,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
   emptyText: {
     ...type.body,
-    color: colors.textDim,
+    color: t.colors.textDim,
     textAlign: 'center',
   },
   list: {
@@ -217,12 +222,12 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
     gap: spacing.md,
     minHeight: 64,
   },
@@ -235,14 +240,14 @@ const styles = StyleSheet.create({
   },
   colorChipText: { ...type.h3, color: '#fff' },
   rowMid: { flex: 1, gap: 2 },
-  rowName: { ...type.h3, color: colors.text },
-  rowVariance: { ...type.caption, color: colors.textMute },
+  rowName: { ...type.h3, color: t.colors.text },
+  rowVariance: { ...type.caption, color: t.colors.textMute },
   rowRight: { alignItems: 'flex-end' },
   rowOvr: {
     ...type.metric,
-    color: colors.text,
+    color: t.colors.text,
     fontSize: 22,
     lineHeight: 24,
   },
-  rowOvrMuted: { ...type.h3, color: colors.textMute },
+  rowOvrMuted: { ...type.h3, color: t.colors.textMute },
 });

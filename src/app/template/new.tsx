@@ -10,7 +10,8 @@ import {
   useTemplate,
   useTemplateCategories,
 } from '@/db/hooks';
-import { colors, spacing, type } from '@/design/tokens';
+import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
+import { spacing, type } from '@/design/tokens';
 import { DEFAULT_ACCENT } from '@/lib/accentPresets';
 
 // Auto-creates a new (optionally cloned) custom template, then redirects
@@ -18,6 +19,8 @@ import { DEFAULT_ACCENT } from '@/lib/accentPresets';
 // moment the user starts editing; "new" is just an async transition.
 
 export default function NewTemplate() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { from } = useLocalSearchParams<{ from?: string }>();
   const sourceId = from ?? '';
   const { data: source, loading: sourceLoading } = useTemplate(sourceId);
@@ -77,13 +80,13 @@ export default function NewTemplate() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const makeStyles = (t: Theme) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: t.colors.bg },
   center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.lg,
   },
-  muted: { ...type.body, color: colors.textDim },
+  muted: { ...type.body, color: t.colors.textDim },
 });

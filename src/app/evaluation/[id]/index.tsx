@@ -41,7 +41,8 @@ import {
   useTemplate,
   type Participant,
 } from '@/db/hooks';
-import { colors, radii, spacing, type } from '@/design/tokens';
+import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
+import { radii, spacing, type } from '@/design/tokens';
 import { CONSENSUS_ID } from '@/lib/consensus';
 import { pickPersonColor } from '@/lib/personColors';
 import {
@@ -61,6 +62,8 @@ const voteUrl = (token: string) => `${VOTE_URL_BASE}/${token}`;
 
 export default function EvaluationDetail() {
   const insets = useSafeAreaInsets();
+  const { colors, name: themeName } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: evaluation, loading } = useEvaluation(id);
   const { data: participants } = useParticipants(id);
@@ -351,7 +354,7 @@ export default function EvaluationDetail() {
           options,
           destructiveButtonIndex,
           cancelButtonIndex,
-          userInterfaceStyle: 'dark',
+          userInterfaceStyle: themeName,
         },
         (index) => {
           if (isShared) {
@@ -623,6 +626,8 @@ function ParticipantRow({
   visibleIndex: number;
   shared: boolean;
 }) {
+  const { colors, name: themeName } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const onPress = () => {
     if (selectMode) {
       if (participant.excluded) {
@@ -674,7 +679,7 @@ function ParticipantRow({
           options: iosOptions,
           destructiveButtonIndex: shared ? undefined : 1,
           cancelButtonIndex: iosOptions.length - 1,
-          userInterfaceStyle: 'dark',
+          userInterfaceStyle: themeName,
         },
         (index) => {
           if (index === 0) onToggleExcluded();
@@ -771,6 +776,7 @@ function ConsensusRow({
   selected: boolean;
   onToggleSelect: (id: string) => void;
 }) {
+  const styles = useThemedStyles(makeStyles);
   const onPress = () => {
     if (selectMode) {
       onToggleSelect(CONSENSUS_ID);
@@ -810,47 +816,47 @@ function ConsensusRow({
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const makeStyles = (t: Theme) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: t.colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  muted: { ...type.body, color: colors.textDim },
+  muted: { ...type.body, color: t.colors.textDim },
   menuBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
   },
-  menuBtnText: { ...type.h2, color: colors.text, lineHeight: 22 },
+  menuBtnText: { ...type.h2, color: t.colors.text, lineHeight: 22 },
   headerPill: {
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     borderRadius: radii.pill,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
-  headerPillText: { ...type.label, color: colors.text },
+  headerPillText: { ...type.label, color: t.colors.text },
   checkbox: {
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bgElev2,
+    backgroundColor: t.colors.bgElev2,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
   checkboxSelected: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
+    backgroundColor: t.colors.accent,
+    borderColor: t.colors.accent,
   },
   checkboxExcluded: { opacity: 0.5 },
-  checkboxMark: { ...type.h3, color: colors.bg, lineHeight: 20 },
+  checkboxMark: { ...type.h3, color: t.colors.onAccent, lineHeight: 20 },
   rowSelected: {
-    borderColor: colors.accent,
-    backgroundColor: colors.bgElev2,
+    borderColor: t.colors.accent,
+    backgroundColor: t.colors.bgElev2,
   },
   compareFooter: {
     position: 'absolute',
@@ -859,21 +865,21 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
-    backgroundColor: colors.bg,
+    backgroundColor: t.colors.bg,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopColor: t.colors.border,
   },
   compareBtn: {
     paddingVertical: 14,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.accent,
+    backgroundColor: t.colors.accent,
     minHeight: 48,
   },
-  compareBtnDisabled: { backgroundColor: colors.bgElev2 },
-  compareBtnText: { ...type.h3, color: colors.bg },
-  compareBtnTextDisabled: { color: colors.textMute },
+  compareBtnDisabled: { backgroundColor: t.colors.bgElev2 },
+  compareBtnText: { ...type.h3, color: t.colors.onAccent },
+  compareBtnTextDisabled: { color: t.colors.textMute },
   scroll: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
@@ -881,24 +887,24 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     ...type.eyebrow,
-    color: colors.textMute,
+    color: t.colors.textMute,
     textTransform: 'uppercase',
   },
   titleInput: {
     ...type.hero,
-    color: colors.text,
-    backgroundColor: colors.bgElev,
+    color: t.colors.text,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     marginTop: spacing.xs,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
     textAlignVertical: 'top',
   },
   lineage: {
     ...type.caption,
-    color: colors.textMute,
+    color: t.colors.textMute,
     marginTop: spacing.sm,
     paddingHorizontal: spacing.sm,
   },
@@ -909,25 +915,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.lg,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.accent,
+    borderColor: t.colors.accent,
     gap: spacing.sm,
   },
   shareStatusDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.accent,
+    backgroundColor: t.colors.accent,
   },
   shareStatusText: {
     ...type.label,
-    color: colors.text,
+    color: t.colors.text,
     flex: 1,
   },
   shareStatusChevron: {
     ...type.h3,
-    color: colors.textMute,
+    color: t.colors.textMute,
   },
   participantsHeader: {
     flexDirection: 'row',
@@ -935,48 +941,48 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     marginTop: spacing.xl,
   },
-  participantsCount: { ...type.caption, color: colors.textMute },
+  participantsCount: { ...type.caption, color: t.colors.textMute },
   list: { marginTop: spacing.sm, gap: spacing.sm },
   listEmpty: {
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
   listEmptyText: {
     ...type.body,
-    color: colors.textDim,
+    color: t.colors.textDim,
     textAlign: 'center',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
     gap: spacing.md,
     minHeight: 64,
   },
   rowExcluded: { opacity: 0.5 },
   consensusRow: {
     backgroundColor: 'transparent',
-    borderColor: colors.accent,
+    borderColor: t.colors.accent,
     borderWidth: 1.5,
   },
   consensusBadge: {
     width: 40,
     height: 40,
     borderRadius: radii.md,
-    backgroundColor: colors.accent,
+    backgroundColor: t.colors.accent,
   },
   consensusSubtitle: {
     ...type.eyebrow,
-    color: colors.accent,
+    color: t.colors.accent,
     textTransform: 'uppercase',
   },
   colorChip: {
@@ -986,21 +992,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  colorChipExcluded: { backgroundColor: colors.bgElev2 },
+  colorChipExcluded: { backgroundColor: t.colors.bgElev2 },
   colorChipText: { ...type.h3, color: '#fff' },
   rowMid: { flex: 1, gap: 2 },
-  rowName: { ...type.h3, color: colors.text },
-  rowNameExcluded: { color: colors.textDim },
+  rowName: { ...type.h3, color: t.colors.text },
+  rowNameExcluded: { color: t.colors.textDim },
   rowExcludedTag: {
     ...type.eyebrow,
-    color: colors.textMute,
+    color: t.colors.textMute,
     textTransform: 'uppercase',
   },
   rowRight: { alignItems: 'flex-end' },
-  rowOvr: { ...type.metric, color: colors.text, fontSize: 22, lineHeight: 24 },
-  rowRank: { ...type.caption, color: colors.textDim, marginTop: 2 },
-  rowOvrMuted: { ...type.h3, color: colors.textMute },
-  chevron: { ...type.h2, color: colors.textMute, marginLeft: spacing.xs },
+  rowOvr: { ...type.metric, color: t.colors.text, fontSize: 22, lineHeight: 24 },
+  rowRank: { ...type.caption, color: t.colors.textDim, marginTop: 2 },
+  rowOvrMuted: { ...type.h3, color: t.colors.textMute },
+  chevron: { ...type.h2, color: t.colors.textMute, marginLeft: spacing.xs },
   addRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1010,22 +1016,22 @@ const styles = StyleSheet.create({
   addInput: {
     ...type.body,
     flex: 1,
-    color: colors.text,
-    backgroundColor: colors.bgElev,
+    color: t.colors.text,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
   addBtn: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: radii.lg,
-    backgroundColor: colors.accent,
+    backgroundColor: t.colors.accent,
   },
-  addBtnDisabled: { backgroundColor: colors.bgElev2 },
-  addBtnText: { ...type.h3, color: colors.bg },
-  addBtnTextDisabled: { color: colors.textMute },
+  addBtnDisabled: { backgroundColor: t.colors.bgElev2 },
+  addBtnText: { ...type.h3, color: t.colors.onAccent },
+  addBtnTextDisabled: { color: t.colors.textMute },
   pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

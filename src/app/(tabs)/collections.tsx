@@ -13,10 +13,13 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useCollections, type CollectionWithCount } from '@/db/hooks';
-import { colors, radii, spacing, type } from '@/design/tokens';
+import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
+import { radii, spacing, type } from '@/design/tokens';
 
 export default function CollectionsTab() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { data, loading, error } = useCollections();
 
   if (loading && !data) {
@@ -70,6 +73,7 @@ export default function CollectionsTab() {
 }
 
 function NewButton() {
+  const styles = useThemedStyles(makeStyles);
   return (
     <Pressable
       onPress={() => router.push('/collection/new')}
@@ -87,6 +91,7 @@ function CollectionRow({
   collection: CollectionWithCount;
   index: number;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <Animated.View entering={FadeInDown.duration(360).delay(60 + index * 30)}>
       <Pressable
@@ -108,6 +113,8 @@ function CollectionRow({
 }
 
 function EmptyState() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <Animated.View entering={FadeIn.duration(440)} style={styles.empty}>
       {Platform.OS === 'ios' && (
@@ -129,8 +136,8 @@ function EmptyState() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+const makeStyles = (t: Theme) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: t.colors.bg },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorBox: {
     flex: 1,
@@ -139,8 +146,8 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     gap: spacing.sm,
   },
-  errorText: { ...type.h3, color: colors.text },
-  errorSub: { ...type.body, color: colors.textDim, textAlign: 'center' },
+  errorText: { ...type.h3, color: t.colors.text },
+  errorSub: { ...type.body, color: t.colors.textDim, textAlign: 'center' },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -149,30 +156,30 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
   },
-  title: { ...type.hero, color: colors.text },
+  title: { ...type.hero, color: t.colors.text },
   newBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: 8,
     borderRadius: radii.pill,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
-  newBtnText: { ...type.label, color: colors.text },
+  newBtnText: { ...type.label, color: t.colors.text },
   list: { paddingHorizontal: spacing.xl, gap: spacing.md },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
-  rowName: { ...type.h2, color: colors.text },
-  rowMeta: { ...type.body, color: colors.textDim, marginTop: 2 },
-  chevron: { ...type.h2, color: colors.textMute, marginLeft: spacing.md },
+  rowName: { ...type.h2, color: t.colors.text },
+  rowMeta: { ...type.body, color: t.colors.textDim, marginTop: 2 },
+  chevron: { ...type.h2, color: t.colors.textMute, marginLeft: spacing.md },
   pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
   empty: {
     flex: 1,
@@ -185,22 +192,22 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: colors.bgElev,
+    backgroundColor: t.colors.bgElev,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderColor: t.colors.border,
   },
   emptyEyebrow: {
     ...type.eyebrow,
-    color: colors.accent,
+    color: t.colors.accent,
     textTransform: 'uppercase',
   },
-  emptyHeadline: { ...type.hero, color: colors.text, textAlign: 'center' },
+  emptyHeadline: { ...type.hero, color: t.colors.text, textAlign: 'center' },
   emptyBody: {
     ...type.body,
-    color: colors.textDim,
+    color: t.colors.textDim,
     textAlign: 'center',
     maxWidth: 320,
     marginTop: spacing.xs,
@@ -210,7 +217,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: colors.accent,
+    backgroundColor: t.colors.accent,
   },
-  ctaText: { ...type.h3, color: colors.bg },
+  ctaText: { ...type.h3, color: t.colors.onAccent },
 });

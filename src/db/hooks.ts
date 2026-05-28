@@ -57,6 +57,15 @@ function publish(...topics: string[]): void {
   notified.forEach((l) => l());
 }
 
+// Notifies every mounted resource hook to refetch. Used after a bulk backup
+// restore, which can touch any table (and `replace` wipes everything), so
+// targeted topic invalidation isn't enough.
+export function publishAll(): void {
+  const all = new Set<() => void>();
+  for (const set of subscribers.values()) set.forEach((l) => all.add(l));
+  all.forEach((l) => l());
+}
+
 const T = {
   collections: 'collections',
   collection: (id: string) => `collection:${id}`,

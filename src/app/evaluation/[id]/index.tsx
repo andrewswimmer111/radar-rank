@@ -52,8 +52,10 @@ import {
   type SortMode,
 } from '@/lib/stats';
 
-// Placeholder host until plan-5 ships the actual voting web app.
-const VOTE_URL_BASE = 'https://radarrank.app/v';
+// Vote-link host, set per build via env. Empty in dev/clones without a
+// configured .env — sharing is guarded at the call sites below so the
+// screen still works offline.
+const VOTE_URL_BASE = process.env.EXPO_PUBLIC_VOTE_URL_BASE;
 
 const voteUrl = (token: string) => `${VOTE_URL_BASE}/${token}`;
 
@@ -267,6 +269,13 @@ export default function EvaluationDetail() {
   };
 
   const onShare = () => {
+    if (!VOTE_URL_BASE) {
+      Alert.alert(
+        "Sharing isn't set up yet",
+        'The vote link host has not been configured for this build.',
+      );
+      return;
+    }
     Alert.alert(
       'Share this evaluation?',
       "You won't be able to add or remove participants until you unshare. Scores and excluded toggles still work.",
@@ -292,6 +301,13 @@ export default function EvaluationDetail() {
 
   const onCopyLink = async () => {
     if (!share) return;
+    if (!VOTE_URL_BASE) {
+      Alert.alert(
+        "Sharing isn't set up yet",
+        'The vote link host has not been configured for this build.',
+      );
+      return;
+    }
     await Clipboard.setStringAsync(voteUrl(share.voteToken));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
       () => {},

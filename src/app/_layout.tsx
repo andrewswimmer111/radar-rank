@@ -1,46 +1,99 @@
-import { Stack } from 'expo-router';
+import { type ErrorBoundaryProps, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ErrorScreen } from '@/components/ErrorScreen';
 import { initDb } from '@/db';
 import { colors } from '@/design/tokens';
 import { useAppFonts } from '@/design/useAppFonts';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+type DbState = 'loading' | 'ready' | 'error';
+
+// Caught by expo-router for render-phase errors anywhere below this layout.
+// At this point the layout (and its providers) have unmounted, so we render
+// the provider-independent ErrorScreen. `retry` re-mounts the route subtree.
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return (
+    <ErrorScreen
+      title="Something went wrong"
+      message={error.message}
+      onRetry={() => {
+        void retry();
+      }}
+    />
+  );
+}
+
 export default function RootLayout() {
   const fontsLoaded = useAppFonts();
-  const [dbReady, setDbReady] = useState(false);
+  const [dbState, setDbState] = useState<DbState>('loading');
+  const [dbError, setDbError] = useState('');
 
-  useEffect(() => {
+  const initialize = useCallback(() => {
+    setDbState('loading');
     initDb()
-      .then(() => setDbReady(true))
+      .then(() => setDbState('ready'))
       .catch((e) => {
         console.error('[layout] DB init failed:', e);
-        setDbReady(true);
+        setDbError(e instanceof Error ? e.message : String(e));
+        setDbState('error');
       });
   }, []);
 
   useEffect(() => {
-    if (fontsLoaded && dbReady) SplashScreen.hideAsync().catch(() => {});
-  }, [fontsLoaded, dbReady]);
+    initialize();
+  }, [initialize]);
 
-  if (!fontsLoaded || !dbReady) return null;
+  useEffect(() => {
+    if (fontsLoaded && dbState !== 'loading') {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded, dbState]);
+
+  // During the very first load the native splash covers this; the dark fill
+  // + spinner only become visible on the retry path after an error.
+  if (!fontsLoaded || dbState === 'loading') {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.bg,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+        <ActivityIndicator color={colors.textDim} />
+      </View>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaProvider>
         <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.bg },
-            animation: 'slide_from_right',
-          }}
-        />
+        {dbState === 'error' ? (
+          <ErrorScreen
+            title="Something went wrong"
+            message={
+              dbError ||
+              'RadarRank had trouble loading its database. Restarting the app may help.'
+            }
+            onRetry={initialize}
+          />
+        ) : (
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.bg },
+              animation: 'slide_from_right',
+            }}
+          />
+        )}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

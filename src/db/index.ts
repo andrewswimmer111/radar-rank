@@ -26,8 +26,16 @@ export function getDb(): Promise<SQLiteDatabase> {
 export function initDb(): Promise<void> {
   if (!initPromise) {
     initPromise = (async () => {
-      await getDb();
-      await seedBuiltinsIfNeeded();
+      try {
+        await getDb();
+        await seedBuiltinsIfNeeded();
+      } catch (e) {
+        // Clear the memoized promises so a retry re-attempts from a clean
+        // slate instead of re-awaiting this cached rejection forever.
+        dbPromise = null;
+        initPromise = null;
+        throw e;
+      }
     })();
   }
   return initPromise;

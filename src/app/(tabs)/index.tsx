@@ -1,130 +1,32 @@
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import {
-  ActionSheetIOS,
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SettingsGearButton } from '@/components/SettingsGearButton';
 import {
-  publishAll,
   useEvaluations,
   useParticipants,
   type Evaluation,
 } from '@/db/hooks';
-import {
-  useTheme,
-  useThemeController,
-  useThemedStyles,
-  type Theme,
-} from '@/design/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
 import { radii, spacing, type } from '@/design/tokens';
-import {
-  applyBackup,
-  exportBackupToFile,
-  pickBackupFile,
-  type BackupV1,
-  type RestoreMode,
-} from '@/lib/backup';
 
 export default function EvaluationsTab() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { name: themeName, setTheme } = useThemeController();
   const styles = useThemedStyles(makeStyles);
   const { data } = useEvaluations();
   const evaluations = data ?? [];
   const empty = evaluations.length === 0;
 
-  // TEMP(plan-4): manual backup trigger until plan-6 settings ships the real entry.
-  const onExport = async () => {
-    try {
-      await exportBackupToFile();
-    } catch (e) {
-      Alert.alert('Export failed', e instanceof Error ? e.message : String(e));
-    }
-  };
-
-  // TEMP(plan-5): manual restore trigger until plan-6 settings ships the real entry.
-  const runImport = async (backup: BackupV1, mode: RestoreMode) => {
-    try {
-      await applyBackup(backup, mode);
-      publishAll();
-      Alert.alert('Restore complete', `Imported with ${mode} mode.`);
-    } catch (e) {
-      Alert.alert('Import failed', e instanceof Error ? e.message : String(e));
-    }
-  };
-
-  const onImport = async () => {
-    let picked: BackupV1 | null;
-    try {
-      picked = await pickBackupFile();
-    } catch (e) {
-      Alert.alert('Import failed', e instanceof Error ? e.message : String(e));
-      return;
-    }
-    if (!picked) return;
-    const backup = picked;
-    Alert.alert(
-      'Restore backup',
-      'Merge adds items missing on this device. Replace wipes current data first.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Merge', onPress: () => runImport(backup, 'merge') },
-        {
-          text: 'Replace',
-          style: 'destructive',
-          onPress: () => runImport(backup, 'replace'),
-        },
-      ],
-    );
-  };
-
-  // TEMP(plan-3/4/5): single dev menu so the temp theme/backup controls don't
-  // crowd the header. plan-6 settings replaces all of this.
-  const openDevMenu = () => {
-    const toggleTheme = () =>
-      setTheme(themeName === 'dark' ? 'light' : 'dark');
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          title: 'Dev tools',
-          options: [
-            `Theme: switch to ${themeName === 'dark' ? 'Light' : 'Dark'}`,
-            'Export backup',
-            'Import backup',
-            'Cancel',
-          ],
-          cancelButtonIndex: 3,
-          userInterfaceStyle: themeName,
-        },
-        (i) => {
-          if (i === 0) toggleTheme();
-          else if (i === 1) void onExport();
-          else if (i === 2) void onImport();
-        },
-      );
-    } else {
-      Alert.alert('Dev tools', undefined, [
-        { text: 'Toggle theme', onPress: toggleTheme },
-        { text: 'Export backup', onPress: () => void onExport() },
-        { text: 'Import backup', onPress: () => void onImport() },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
-    }
-  };
-
   if (empty) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.topBar}>
+          <SettingsGearButton />
+        </View>
         <Animated.View entering={FadeIn.duration(440)} style={styles.empty}>
           {Platform.OS === 'ios' && (
             <View style={styles.emptyIcon}>
@@ -156,13 +58,7 @@ export default function EvaluationsTab() {
       <View style={styles.headerRow}>
         <Text style={styles.title}>Evaluations</Text>
         <View style={styles.headerActions}>
-          {/* TEMP(plan-3/4/5): dev menu until plan-6 settings ships */}
-          <Pressable
-            onPress={openDevMenu}
-            hitSlop={10}
-            style={({ pressed }) => [styles.newBtn, pressed && styles.pressed]}>
-            <Text style={styles.newBtnText}>Dev</Text>
-          </Pressable>
+          <SettingsGearButton />
           <Pressable
             onPress={() => router.push('/evaluation/new')}
             hitSlop={10}
@@ -236,6 +132,12 @@ function timeAgo(ts: number): string {
 
 const makeStyles = (t: Theme) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: t.colors.bg },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+  },
   empty: {
     flex: 1,
     alignItems: 'center',

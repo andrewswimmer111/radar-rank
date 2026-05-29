@@ -12,6 +12,7 @@ import {
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SettingsGearButton } from '@/components/SettingsGearButton';
 import { useCollections, type CollectionWithCount } from '@/db/hooks';
 import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
 import { radii, spacing, type } from '@/design/tokens';
@@ -49,12 +50,20 @@ export default function CollectionsTab() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {empty ? (
-        <EmptyState />
+        <>
+          <View style={styles.topBar}>
+            <SettingsGearButton />
+          </View>
+          <EmptyState />
+        </>
       ) : (
         <>
           <View style={styles.headerRow}>
             <Text style={styles.title}>Collections</Text>
-            <NewButton />
+            <View style={styles.headerActions}>
+              <SettingsGearButton />
+              <NewButton />
+            </View>
           </View>
           <ScrollView
             contentContainerStyle={[
@@ -157,6 +166,13 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   title: { ...type.hero, color: t.colors.text },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+  },
   newBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: 8,

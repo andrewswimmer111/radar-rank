@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as cloudPull from '../cloud/pull';
 import * as cloudPush from '../cloud/push';
 import { aggregateConsensus, type ConsensusMap } from '../lib/consensus';
+import { getDb } from './index';
 import * as collectionsDb from './collections';
 import * as evaluationsDb from './evaluations';
 import * as evaluationCategoriesDb from './evaluationCategories';
@@ -466,4 +467,18 @@ export async function refreshSubmissions(evaluationId: string) {
   // share gets touched (last_pulled_at), submissions cache may have new
   // rows — invalidate both so any mounted consumers refetch.
   publish(T.voteSubmissions(evaluationId), T.share(evaluationId));
+}
+
+// Wipes all user-owned data in one transaction. Cascades clear people,
+// participants, categories, and scores; built-in templates are preserved
+// (every install seeds the same stable-id set). Theme and other prefs in
+// app_state are left intact.
+export async function deleteAllData(): Promise<void> {
+  const db = await getDb();
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('DELETE FROM evaluations');
+    await db.runAsync('DELETE FROM collections');
+    await db.runAsync('DELETE FROM templates WHERE is_builtin = 0');
+  });
+  publishAll();
 }

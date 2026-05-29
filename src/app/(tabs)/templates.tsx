@@ -11,6 +11,7 @@ import {
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SettingsGearButton } from '@/components/SettingsGearButton';
 import { useTemplates, type Template } from '@/db/hooks';
 import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
 import { radii, spacing, type } from '@/design/tokens';
@@ -50,12 +51,15 @@ export default function TemplatesTab() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>Templates</Text>
-        <Pressable
-          onPress={() => router.push('/template/new')}
-          hitSlop={10}
-          style={({ pressed }) => [styles.newBtn, pressed && styles.pressed]}>
-          <Text style={styles.newBtnText}>+ New</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <SettingsGearButton />
+          <Pressable
+            onPress={() => router.push('/template/new')}
+            hitSlop={10}
+            style={({ pressed }) => [styles.newBtn, pressed && styles.pressed]}>
+            <Text style={styles.newBtnText}>+ New</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -158,6 +162,7 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   title: { ...type.hero, color: t.colors.text },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   newBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: 8,

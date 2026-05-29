@@ -250,6 +250,128 @@ export function mostBalancedParticipant(
   return best;
 }
 
+// ---- Advanced analytics --------------------------------------------------
+
+function indexScores(
+  scores: readonly FlatScore[],
+): Map<string, Map<string, number>> {
+  const m = new Map<string, Map<string, number>>();
+  for (const s of scores) {
+    let inner = m.get(s.participantId);
+    if (!inner) {
+      inner = new Map();
+      m.set(s.participantId, inner);
+    }
+    inner.set(s.categoryKey, s.value);
+  }
+  return m;
+}
+
+// Population variance of participant scores within each category, across the
+// given participants. Missing scores default to 50 (the app-wide neutral) so
+// every category is measured over the same N. High variance = participants
+// disagree (a differentiating category); low = everyone scores alike.
+export function categoryVariance(
+  scores: readonly FlatScore[],
+  categoryKeys: readonly string[],
+  participantIds: readonly string[],
+): Map<string, number> {
+  const byP = indexScores(scores);
+  const out = new Map<string, number>();
+  if (participantIds.length === 0) return out;
+  for (const key of categoryKeys) {
+    const vals = participantIds.map((pid) => byP.get(pid)?.get(key) ?? 50);
+    const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const variance =
+      vals.reduce((acc, v) => acc + (v - mean) ** 2, 0) / vals.length;
+    out.set(key, variance);
+  }
+  return out;
+}
+
+export type SpecialistResult = {
+  participantId: string;
+  topCategoryKey: string;
+  topScore: number;
+  spread: number;
+};
+
+// Most "specialized" participant: the largest score spread (peak − valley),
+// tie-broken by the higher peak. Surfaces their standout category. Returns
+// null when `participantIds` is empty.
+export function strongestSpecialist(
+  scores: readonly FlatScore[],
+  participantIds: readonly string[],
+  categoryKeys: readonly string[],
+): SpecialistResult | null {
+  if (categoryKeys.length === 0) return null;
+  const byP = indexScores(scores);
+  let best: SpecialistResult | null = null;
+  for (const pid of participantIds) {
+    const cells = categoryKeys.map((k) => ({ k, v: byP.get(pid)?.get(k) ?? 50 }));
+    let top = cells[0];
+    let min = cells[0].v;
+    for (const cell of cells) {
+      if (cell.v > top.v) top = cell;
+      if (cell.v < min) min = cell.v;
+    }
+    const spread = top.v - min;
+    if (
+      best === null ||
+      spread > best.spread ||
+      (spread === best.spread && top.v > best.topScore)
+    ) {
+      best = { participantId: pid, topCategoryKey: top.k, topScore: top.v, spread };
+    }
+  }
+  return best;
+}
+
+export type ProfilePair = {
+  aId: string;
+  bId: string;
+  distance: number;
+  similarity: number; // 0–100, 100 = identical
+};
+
+// Closest profile pairs by Euclidean distance over the 0–100 category
+// vectors (missing → 50). Unordered pairs, closest first, up to `limit`.
+// Returns [] with fewer than two participants or no categories.
+export function closestPairs(
+  scores: readonly FlatScore[],
+  participantIds: readonly string[],
+  categoryKeys: readonly string[],
+  limit = 3,
+): ProfilePair[] {
+  if (participantIds.length < 2 || categoryKeys.length === 0) return [];
+  const byP = indexScores(scores);
+  const vectors = participantIds.map((pid) => ({
+    id: pid,
+    vec: categoryKeys.map((k) => byP.get(pid)?.get(k) ?? 50),
+  }));
+  const maxDist = 100 * Math.sqrt(categoryKeys.length);
+  const pairs: ProfilePair[] = [];
+  for (let i = 0; i < vectors.length; i++) {
+    for (let j = i + 1; j < vectors.length; j++) {
+      let sum = 0;
+      for (let c = 0; c < categoryKeys.length; c++) {
+        const d = vectors[i].vec[c] - vectors[j].vec[c];
+        sum += d * d;
+      }
+      const distance = Math.sqrt(sum);
+      const similarity = Math.round(100 * (1 - distance / maxDist));
+      pairs.push({
+        aId: vectors[i].id,
+        bId: vectors[j].id,
+        distance,
+        similarity,
+      });
+    }
+  }
+  pairs.sort((a, b) => a.distance - b.distance);
+  return pairs.slice(0, limit);
+}
+
 // ---- Sort comparators ----------------------------------------------------
 
 export type SortMode =

@@ -481,6 +481,7 @@ export default function EvaluationDetail() {
 
           {!selectMode && (
             <EvaluationSummary
+              evaluationId={id}
               participants={participantList}
               categories={categories ?? []}
               scores={scores ?? []}

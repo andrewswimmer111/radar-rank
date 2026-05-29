@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import type {
@@ -17,12 +18,18 @@ import {
 } from '@/lib/stats';
 
 type Props = {
+  evaluationId: string;
   participants: readonly Participant[];
   categories: readonly EvaluationCategory[];
   scores: readonly Score[];
 };
 
-export function EvaluationSummary({ participants, categories, scores }: Props) {
+export function EvaluationSummary({
+  evaluationId,
+  participants,
+  categories,
+  scores,
+}: Props) {
   const styles = useThemedStyles(makeStyles);
   const active = participants.filter((p) => !p.excluded);
   if (active.length < 2) return null;
@@ -52,7 +59,17 @@ export function EvaluationSummary({ participants, categories, scores }: Props) {
 
   return (
     <Animated.View entering={FadeIn.duration(420)} style={styles.wrap}>
-      <Text style={styles.eyebrow}>Summary</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.eyebrow}>Summary</Text>
+        <Pressable
+          onPress={() => router.push(`/evaluation/${evaluationId}/insights`)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="View insights"
+          style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}>
+          <Text style={styles.chipText}>Insights ›</Text>
+        </Pressable>
+      </View>
       <View style={styles.rows}>
         <View style={styles.row}>
           <Cell label="Avg OVR" value={String(avgOvr)} />
@@ -108,11 +125,26 @@ function Cell({
 
 const makeStyles = (t: Theme) => StyleSheet.create({
   wrap: { gap: spacing.sm, marginTop: spacing.xl },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   eyebrow: {
     ...type.eyebrow,
     color: t.colors.textMute,
     textTransform: 'uppercase',
   },
+  chip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
+    backgroundColor: t.colors.bgElev,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: t.colors.border,
+  },
+  chipText: { ...type.label, color: t.colors.accent },
+  chipPressed: { opacity: 0.7 },
   rows: { gap: spacing.sm },
   row: { flexDirection: 'row', gap: spacing.sm },
   cell: {

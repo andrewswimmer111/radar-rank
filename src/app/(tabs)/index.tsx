@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { memo } from 'react';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -81,7 +82,7 @@ export default function EvaluationsTab() {
   );
 }
 
-function EvaluationRow({
+const EvaluationRow = memo(function EvaluationRow({
   evaluation,
   index,
 }: {
@@ -99,9 +100,11 @@ function EvaluationRow({
     <Animated.View entering={FadeInDown.duration(360).delay(60 + index * 30)}>
       <Pressable
         onPress={() => router.push(`/evaluation/${evaluation.id}`)}
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${evaluation.title}`}
         style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
         <View style={styles.rowBody}>
-          <Text style={styles.rowTitle} numberOfLines={1}>
+          <Text style={styles.rowTitle} numberOfLines={2}>
             {evaluation.title}
           </Text>
           <Text style={styles.rowSubtitle} numberOfLines={1}>
@@ -112,7 +115,7 @@ function EvaluationRow({
       </Pressable>
     </Animated.View>
   );
-}
+});
 
 function timeAgo(ts: number): string {
   const diffMs = Date.now() - ts;

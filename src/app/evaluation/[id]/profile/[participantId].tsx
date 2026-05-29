@@ -60,7 +60,7 @@ export default function ProfileScreen() {
   );
 
   const participant = participants?.find((p) => p.id === participantId);
-  const cats = categories ?? [];
+  const cats = useMemo(() => categories ?? [], [categories]);
 
   // Two parallel score states:
   //   - `localScores` is the live slider value (updates every drag frame).

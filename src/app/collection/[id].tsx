@@ -132,6 +132,8 @@ export default function CollectionEditor() {
           <Pressable
             onPress={onDeleteCollection}
             hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Delete collection"
             style={({ pressed }) => [styles.menuBtn, pressed && styles.pressed]}>
             <Text style={styles.menuBtnText}>⋯</Text>
           </Pressable>

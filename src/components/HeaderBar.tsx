@@ -13,6 +13,8 @@ export function HeaderBar({ title, right }: Props) {
       <Pressable
         hitSlop={12}
         onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+        accessibilityRole="button"
+        accessibilityLabel="Back"
         style={({ pressed }) => [styles.back, pressed && { opacity: 0.6 }]}>
         <Text style={styles.backText}>←</Text>
       </Pressable>

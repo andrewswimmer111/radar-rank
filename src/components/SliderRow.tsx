@@ -1,6 +1,6 @@
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
-import { useCallback } from 'react';
+import { memo, useCallback } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
@@ -14,7 +14,22 @@ type Props = {
   onCommit?: (next: number) => void;
 };
 
-export function SliderRow({ label, value, accent, onChange, onCommit }: Props) {
+// Custom equality on value/label/accent only — the parent re-creates the
+// onChange/onCommit closures every render (they capture a category key),
+// so default shallow memo would never skip a render. The callbacks just
+// dispatch into the parent's current state setters, so the latest version
+// is invoked from inside the closure each time regardless.
+function propsEqual(a: Props, b: Props): boolean {
+  return a.value === b.value && a.label === b.label && a.accent === b.accent;
+}
+
+export const SliderRow = memo(function SliderRow({
+  label,
+  value,
+  accent,
+  onChange,
+  onCommit,
+}: Props) {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const handleComplete = useCallback(
@@ -47,7 +62,7 @@ export function SliderRow({ label, value, accent, onChange, onCommit }: Props) {
       />
     </View>
   );
-}
+}, propsEqual);
 
 const makeStyles = (t: Theme) => StyleSheet.create({
   row: { paddingVertical: spacing.sm },

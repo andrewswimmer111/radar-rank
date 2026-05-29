@@ -171,6 +171,8 @@ export default function TemplateEditor() {
           <Pressable
             onPress={onDeleteTemplate}
             hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Delete template"
             style={({ pressed }) => [styles.menuBtn, pressed && styles.pressed]}>
             <Text style={styles.menuBtnText}>⋯</Text>
           </Pressable>

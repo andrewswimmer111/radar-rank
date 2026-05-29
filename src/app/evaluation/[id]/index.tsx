@@ -1,7 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -166,7 +166,7 @@ export default function EvaluationDetail() {
     router.push(`/evaluation/${id}/compare?ids=${idsParam}`);
   };
 
-  const participantList = participants ?? [];
+  const participantList = useMemo(() => participants ?? [], [participants]);
   const categoryKeys = useMemo(
     () => (categories ?? []).map((c) => c.key),
     [categories],
@@ -419,6 +419,8 @@ export default function EvaluationDetail() {
               <Pressable
                 onPress={onOpenMenu}
                 hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="More options"
                 style={({ pressed }) => [
                   styles.menuBtn,
                   pressed && styles.pressed,
@@ -606,7 +608,7 @@ export default function EvaluationDetail() {
   );
 }
 
-function ParticipantRow({
+const ParticipantRow = memo(function ParticipantRow({
   participant,
   evaluationId,
   ovr,
@@ -711,6 +713,13 @@ function ParticipantRow({
       onPress={onPress}
       onLongPress={selectMode ? undefined : onLongPress}
       delayLongPress={350}
+      accessibilityRole="button"
+      accessibilityLabel={
+        selectMode
+          ? `Select ${participant.name}`
+          : `Open ${participant.name}'s profile`
+      }
+      accessibilityState={selectMode ? { selected } : undefined}
       style={({ pressed }) => [
         styles.row,
         participant.excluded && styles.rowExcluded,
@@ -742,7 +751,7 @@ function ParticipantRow({
       <View style={styles.rowMid}>
         <Text
           style={[styles.rowName, participant.excluded && styles.rowNameExcluded]}
-          numberOfLines={1}>
+          numberOfLines={2}>
           {participant.name}
         </Text>
         {participant.excluded && (
@@ -762,9 +771,9 @@ function ParticipantRow({
       {!selectMode && <Text style={styles.chevron}>›</Text>}
     </Pressable>
   );
-}
+});
 
-function ConsensusRow({
+const ConsensusRow = memo(function ConsensusRow({
   evaluationId,
   voteCount,
   selectMode,
@@ -789,6 +798,11 @@ function ConsensusRow({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={
+        selectMode ? 'Select Consensus' : 'Open Consensus details'
+      }
+      accessibilityState={selectMode ? { selected } : undefined}
       style={({ pressed }) => [
         styles.row,
         styles.consensusRow,
@@ -815,7 +829,7 @@ function ConsensusRow({
       {!selectMode && <Text style={styles.chevron}>›</Text>}
     </Pressable>
   );
-}
+});
 
 const makeStyles = (t: Theme) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: t.colors.bg },

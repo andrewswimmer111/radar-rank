@@ -60,16 +60,18 @@ Open <http://localhost:3000>. To test the voting flow:
 
 ## Deploying to Vercel
 
-1. Create a new Vercel project pointing at this repo.
+1. Create a new Vercel project pointing at this repo. **Name it `radarrank`**
+   so the auto-assigned host (`radarrank.vercel.app`) matches what the iOS
+   app already expects.
 2. Set the **Root Directory** to `voting-web` (Vercel will auto-detect
    Next.js).
 3. Add the two `NEXT_PUBLIC_*` env vars in the Vercel project settings.
 4. Deploy.
 
-The share URL host (`https://radarrank.app/v/...` in
-`src/app/evaluation/[id]/index.tsx`) is a placeholder. Once Vercel assigns
-a domain (e.g. `radarrank-vote.vercel.app`), update `VOTE_URL_BASE` in
-that file to match.
+The iOS app reads the host from `EXPO_PUBLIC_VOTE_URL_BASE` in `.env`,
+currently `https://radarrank.vercel.app/v`. If Vercel can't take the
+`radarrank` project name and assigns a different host, update that one env
+line and re-build TestFlight.
 
 ## How submission works
 

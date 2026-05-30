@@ -16,8 +16,20 @@ const bricolage = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://radarrank.vercel.app'),
   title: 'RadarRank',
   description: 'Score participants for a RadarRank evaluation.',
+  openGraph: {
+    title: 'RadarRank',
+    description: 'Score participants for a RadarRank evaluation.',
+    siteName: 'RadarRank',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'RadarRank',
+    description: 'Score participants for a RadarRank evaluation.',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

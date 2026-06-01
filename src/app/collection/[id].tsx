@@ -2,7 +2,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,7 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AddItemRow } from '@/components/AddItemRow';
 import { HeaderBar } from '@/components/HeaderBar';
+import { ReorderActions } from '@/components/ReorderActions';
 import {
   createPerson,
   deleteCollection,
@@ -27,7 +28,8 @@ import {
   type Person,
 } from '@/db/hooks';
 import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
-import { radii, spacing, type } from '@/design/tokens';
+import { pressed, radii, spacing, type } from '@/design/tokens';
+import { confirmDestructive } from '@/lib/dialog';
 import { pickPersonColor } from '@/lib/personColors';
 
 export default function CollectionEditor() {
@@ -106,22 +108,17 @@ export default function CollectionEditor() {
   };
 
   const onDeleteCollection = () => {
-    Alert.alert(
-      'Delete this collection?',
-      'All people will be removed. Existing evaluations keep their participant snapshots.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteCollection(id);
-            if (router.canGoBack()) router.back();
-            else router.replace('/collections');
-          },
-        },
-      ],
-    );
+    confirmDestructive({
+      title: 'Delete this collection?',
+      message:
+        'All people will be removed. Existing evaluations keep their participant snapshots.',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        await deleteCollection(id);
+        if (router.canGoBack()) router.back();
+        else router.replace('/collections');
+      },
+    });
   };
 
   return (
@@ -134,7 +131,7 @@ export default function CollectionEditor() {
             hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel="Delete collection"
-            style={({ pressed }) => [styles.menuBtn, pressed && styles.pressed]}>
+            style={({ pressed: p }) => [styles.menuBtn, p && pressed.default]}>
             <Text style={styles.menuBtnText}>⋯</Text>
           </Pressable>
         }
@@ -182,36 +179,12 @@ export default function CollectionEditor() {
             ))}
           </View>
 
-          <View style={styles.addRow}>
-            <TextInput
-              style={styles.addInput}
-              value={newPersonName}
-              onChangeText={setNewPersonName}
-              placeholder="Add a person…"
-              placeholderTextColor={colors.textMute}
-              returnKeyType="done"
-              autoCapitalize="words"
-              autoCorrect={false}
-              onSubmitEditing={onAddPerson}
-              maxLength={40}
-            />
-            <Pressable
-              onPress={onAddPerson}
-              disabled={!newPersonName.trim()}
-              style={({ pressed }) => [
-                styles.addBtn,
-                !newPersonName.trim() && styles.addBtnDisabled,
-                pressed && newPersonName.trim() && styles.pressed,
-              ]}>
-              <Text
-                style={[
-                  styles.addBtnText,
-                  !newPersonName.trim() && styles.addBtnTextDisabled,
-                ]}>
-                Add
-              </Text>
-            </Pressable>
-          </View>
+          <AddItemRow
+            value={newPersonName}
+            onChangeText={setNewPersonName}
+            onAdd={onAddPerson}
+            placeholder="Add a person…"
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -248,16 +221,12 @@ function PersonRow({
     setEditing(false);
   };
 
-  const onDelete = () => {
-    Alert.alert(`Remove ${person.name}?`, undefined, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => deletePerson(person.id, person.collectionId),
-      },
-    ]);
-  };
+  const onDelete = () =>
+    confirmDestructive({
+      title: `Remove ${person.name}?`,
+      confirmLabel: 'Remove',
+      onConfirm: () => deletePerson(person.id, person.collectionId),
+    });
 
   return (
     <View style={styles.personRow}>
@@ -291,42 +260,13 @@ function PersonRow({
         </Pressable>
       )}
       {!editing && (
-        <View style={styles.actions}>
-          <Pressable
-            onPress={() => onReorder('up')}
-            disabled={isFirst}
-            hitSlop={6}
-            style={({ pressed }) => [
-              styles.iconBtn,
-              isFirst && styles.iconBtnDisabled,
-              pressed && !isFirst && styles.pressed,
-            ]}>
-            <Text
-              style={[styles.iconText, isFirst && styles.iconTextDisabled]}>
-              ↑
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => onReorder('down')}
-            disabled={isLast}
-            hitSlop={6}
-            style={({ pressed }) => [
-              styles.iconBtn,
-              isLast && styles.iconBtnDisabled,
-              pressed && !isLast && styles.pressed,
-            ]}>
-            <Text
-              style={[styles.iconText, isLast && styles.iconTextDisabled]}>
-              ↓
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={onDelete}
-            hitSlop={6}
-            style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}>
-            <Text style={[styles.iconText, { color: colors.danger }]}>✕</Text>
-          </Pressable>
-        </View>
+        <ReorderActions
+          isFirst={isFirst}
+          isLast={isLast}
+          onMoveUp={() => onReorder('up')}
+          onMoveDown={() => onReorder('down')}
+          onDelete={onDelete}
+        />
       )}
     </View>
   );
@@ -403,43 +343,4 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     flex: 1,
     paddingVertical: 0,
   },
-  actions: { flexDirection: 'row', gap: spacing.xs },
-  iconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: t.colors.bgElev2,
-  },
-  iconBtnDisabled: { opacity: 0.35 },
-  iconText: { ...type.h3, color: t.colors.text },
-  iconTextDisabled: { color: t.colors.textMute },
-  addRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.lg,
-    gap: spacing.sm,
-  },
-  addInput: {
-    ...type.body,
-    flex: 1,
-    color: t.colors.text,
-    backgroundColor: t.colors.bgElev,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: t.colors.border,
-  },
-  addBtn: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radii.lg,
-    backgroundColor: t.colors.accent,
-  },
-  addBtnDisabled: { backgroundColor: t.colors.bgElev2 },
-  addBtnText: { ...type.h3, color: t.colors.onAccent },
-  addBtnTextDisabled: { color: t.colors.textMute },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

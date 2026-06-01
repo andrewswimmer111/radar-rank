@@ -3,7 +3,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,7 +14,9 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AddItemRow } from '@/components/AddItemRow';
 import { HeaderBar } from '@/components/HeaderBar';
+import { ReorderActions } from '@/components/ReorderActions';
 import {
   createTemplateCategory,
   deleteTemplate,
@@ -30,8 +31,9 @@ import {
 } from '@/db/hooks';
 import { genId } from '@/db/util';
 import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
-import { radii, spacing, type } from '@/design/tokens';
+import { pressed, radii, spacing, type } from '@/design/tokens';
 import { ACCENT_PRESETS, accentEquals } from '@/lib/accentPresets';
+import { confirmDestructive } from '@/lib/dialog';
 
 export default function TemplateEditor() {
   const insets = useSafeAreaInsets();
@@ -84,7 +86,7 @@ export default function TemplateEditor() {
           <Text style={styles.muted}>Built-in templates can&apos;t be edited.</Text>
           <Pressable
             onPress={() => router.back()}
-            style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}>
+            style={({ pressed: p }) => [styles.backBtn, p && pressed.default]}>
             <Text style={styles.backBtnText}>Back</Text>
           </Pressable>
         </View>
@@ -145,22 +147,17 @@ export default function TemplateEditor() {
   };
 
   const onDeleteTemplate = () => {
-    Alert.alert(
-      'Delete this template?',
-      'Existing evaluations created from it keep their snapshotted categories.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteTemplate(id);
-            if (router.canGoBack()) router.back();
-            else router.replace('/templates');
-          },
-        },
-      ],
-    );
+    confirmDestructive({
+      title: 'Delete this template?',
+      message:
+        'Existing evaluations created from it keep their snapshotted categories.',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        await deleteTemplate(id);
+        if (router.canGoBack()) router.back();
+        else router.replace('/templates');
+      },
+    });
   };
 
   return (
@@ -173,7 +170,7 @@ export default function TemplateEditor() {
             hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel="Delete template"
-            style={({ pressed }) => [styles.menuBtn, pressed && styles.pressed]}>
+            style={({ pressed: p }) => [styles.menuBtn, p && pressed.default]}>
             <Text style={styles.menuBtnText}>⋯</Text>
           </Pressable>
         }
@@ -229,10 +226,10 @@ export default function TemplateEditor() {
                 <Pressable
                   key={i}
                   onPress={() => onAccentPick(preset)}
-                  style={({ pressed }) => [
+                  style={({ pressed: p }) => [
                     styles.swatchOuter,
                     active && styles.swatchOuterActive,
-                    pressed && styles.pressed,
+                    p && pressed.default,
                   ]}>
                   <LinearGradient
                     colors={[preset.start, preset.end]}
@@ -272,35 +269,13 @@ export default function TemplateEditor() {
             )}
           </View>
 
-          <View style={styles.addRow}>
-            <TextInput
-              style={styles.addInput}
-              value={newCategoryLabel}
-              onChangeText={setNewCategoryLabel}
-              placeholder="Add a category…"
-              placeholderTextColor={colors.textMute}
-              returnKeyType="done"
-              autoCapitalize="sentences"
-              onSubmitEditing={onAddCategory}
-              maxLength={40}
-            />
-            <Pressable
-              onPress={onAddCategory}
-              disabled={!newCategoryLabel.trim()}
-              style={({ pressed }) => [
-                styles.addBtn,
-                !newCategoryLabel.trim() && styles.addBtnDisabled,
-                pressed && newCategoryLabel.trim() && styles.pressed,
-              ]}>
-              <Text
-                style={[
-                  styles.addBtnText,
-                  !newCategoryLabel.trim() && styles.addBtnTextDisabled,
-                ]}>
-                Add
-              </Text>
-            </Pressable>
-          </View>
+          <AddItemRow
+            value={newCategoryLabel}
+            onChangeText={setNewCategoryLabel}
+            onAdd={onAddCategory}
+            placeholder="Add a category…"
+            autoCapitalize="sentences"
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -341,7 +316,6 @@ function CategoryRow({
   isLast: boolean;
   onReorder: (direction: 'up' | 'down') => void;
 }) {
-  const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(category.label);
@@ -362,17 +336,12 @@ function CategoryRow({
     setEditing(false);
   };
 
-  const onDelete = () => {
-    Alert.alert(`Remove "${category.label}"?`, undefined, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () =>
-          deleteTemplateCategory(category.id, category.templateId),
-      },
-    ]);
-  };
+  const onDelete = () =>
+    confirmDestructive({
+      title: `Remove "${category.label}"?`,
+      confirmLabel: 'Remove',
+      onConfirm: () => deleteTemplateCategory(category.id, category.templateId),
+    });
 
   return (
     <View style={styles.catRow}>
@@ -398,42 +367,13 @@ function CategoryRow({
         </Pressable>
       )}
       {!editing && (
-        <View style={styles.catActions}>
-          <Pressable
-            onPress={() => onReorder('up')}
-            disabled={isFirst}
-            hitSlop={6}
-            style={({ pressed }) => [
-              styles.iconBtn,
-              isFirst && styles.iconBtnDisabled,
-              pressed && !isFirst && styles.pressed,
-            ]}>
-            <Text
-              style={[styles.iconText, isFirst && styles.iconTextDisabled]}>
-              ↑
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => onReorder('down')}
-            disabled={isLast}
-            hitSlop={6}
-            style={({ pressed }) => [
-              styles.iconBtn,
-              isLast && styles.iconBtnDisabled,
-              pressed && !isLast && styles.pressed,
-            ]}>
-            <Text
-              style={[styles.iconText, isLast && styles.iconTextDisabled]}>
-              ↓
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={onDelete}
-            hitSlop={6}
-            style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}>
-            <Text style={[styles.iconText, { color: colors.danger }]}>✕</Text>
-          </Pressable>
-        </View>
+        <ReorderActions
+          isFirst={isFirst}
+          isLast={isLast}
+          onMoveUp={() => onReorder('up')}
+          onMoveDown={() => onReorder('down')}
+          onDelete={onDelete}
+        />
       )}
     </View>
   );
@@ -554,43 +494,4 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     flex: 1,
     paddingVertical: 0,
   },
-  catActions: { flexDirection: 'row', gap: spacing.xs },
-  iconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: t.colors.bgElev2,
-  },
-  iconBtnDisabled: { opacity: 0.35 },
-  iconText: { ...type.h3, color: t.colors.text },
-  iconTextDisabled: { color: t.colors.textMute },
-  addRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.lg,
-    gap: spacing.sm,
-  },
-  addInput: {
-    ...type.body,
-    flex: 1,
-    color: t.colors.text,
-    backgroundColor: t.colors.bgElev,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: t.colors.border,
-  },
-  addBtn: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radii.lg,
-    backgroundColor: t.colors.accent,
-  },
-  addBtnDisabled: { backgroundColor: t.colors.bgElev2 },
-  addBtnText: { ...type.h3, color: t.colors.onAccent },
-  addBtnTextDisabled: { color: t.colors.textMute },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

@@ -3,7 +3,6 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
@@ -19,6 +18,7 @@ import {
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AddItemRow } from '@/components/AddItemRow';
 import { EvaluationSummary } from '@/components/EvaluationSummary';
 import { HeaderBar } from '@/components/HeaderBar';
 import { SortMenu } from '@/components/SortMenu';
@@ -42,8 +42,9 @@ import {
   type Participant,
 } from '@/db/hooks';
 import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
-import { radii, spacing, type } from '@/design/tokens';
+import { pressed, radii, spacing, type } from '@/design/tokens';
 import { CONSENSUS_ID } from '@/lib/consensus';
+import { confirmDestructive, showActionSheet } from '@/lib/dialog';
 import { pickPersonColor } from '@/lib/personColors';
 import {
   compareParticipantsBy,
@@ -253,22 +254,17 @@ export default function EvaluationDetail() {
   };
 
   const onDeleteEvaluation = () => {
-    Alert.alert(
-      'Delete this evaluation?',
-      'Participants, categories, and scores are removed permanently.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteEvaluation(id);
-            if (router.canGoBack()) router.back();
-            else router.replace('/');
-          },
-        },
-      ],
-    );
+    confirmDestructive({
+      title: 'Delete this evaluation?',
+      message:
+        'Participants, categories, and scores are removed permanently.',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        await deleteEvaluation(id);
+        if (router.canGoBack()) router.back();
+        else router.replace('/');
+      },
+    });
   };
 
   const onShare = () => {
@@ -318,70 +314,51 @@ export default function EvaluationDetail() {
   };
 
   const onUnshare = () => {
-    Alert.alert(
-      'Unshare this evaluation?',
-      'The share link will stop working and any submitted votes will be removed.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Unshare',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await unshareEvaluation(id);
-            } catch (err) {
-              Alert.alert(
-                'Could not unshare',
-                err instanceof Error ? err.message : String(err),
-              );
-            }
-          },
-        },
-      ],
-    );
+    confirmDestructive({
+      title: 'Unshare this evaluation?',
+      message:
+        'The share link will stop working and any submitted votes will be removed.',
+      confirmLabel: 'Unshare',
+      onConfirm: async () => {
+        try {
+          await unshareEvaluation(id);
+        } catch (err) {
+          Alert.alert(
+            'Could not unshare',
+            err instanceof Error ? err.message : String(err),
+          );
+        }
+      },
+    });
   };
 
   const onOpenMenu = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    const options = isShared
-      ? ['Copy link', 'Unshare', 'Delete evaluation', 'Cancel']
-      : ['Share evaluation', 'Delete evaluation', 'Cancel'];
-    const destructiveButtonIndex = isShared ? 2 : 1;
-    const cancelButtonIndex = options.length - 1;
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options,
-          destructiveButtonIndex,
-          cancelButtonIndex,
-          userInterfaceStyle: themeName,
-        },
-        (index) => {
-          if (isShared) {
-            if (index === 0) void onCopyLink();
-            else if (index === 1) onUnshare();
-            else if (index === 2) onDeleteEvaluation();
-          } else {
-            if (index === 0) onShare();
-            else if (index === 1) onDeleteEvaluation();
-          }
-        },
-      );
-    } else {
-      const buttons = isShared
-        ? [
-            { text: 'Copy link', onPress: () => void onCopyLink() },
-            { text: 'Unshare', style: 'destructive' as const, onPress: onUnshare },
-            { text: 'Delete evaluation', style: 'destructive' as const, onPress: onDeleteEvaluation },
-            { text: 'Cancel', style: 'cancel' as const },
-          ]
-        : [
-            { text: 'Share evaluation', onPress: onShare },
-            { text: 'Delete evaluation', style: 'destructive' as const, onPress: onDeleteEvaluation },
-            { text: 'Cancel', style: 'cancel' as const },
-          ];
-      Alert.alert(evaluation?.title ?? 'Evaluation', undefined, buttons);
-    }
+    const actions = isShared
+      ? [
+          { label: 'Copy link', onPress: () => void onCopyLink() },
+          { label: 'Unshare', destructive: true, onPress: onUnshare },
+          {
+            label: 'Delete evaluation',
+            destructive: true,
+            onPress: onDeleteEvaluation,
+          },
+        ]
+      : [
+          { label: 'Share evaluation', onPress: onShare },
+          {
+            label: 'Delete evaluation',
+            destructive: true,
+            onPress: onDeleteEvaluation,
+          },
+        ];
+    showActionSheet({
+      // Title only shows on Android (iOS sheet here intentionally has no
+      // title to match the prior bare presentation).
+      title: Platform.OS === 'android' ? evaluation?.title ?? 'Evaluation' : undefined,
+      actions,
+      themeName,
+    });
   };
 
   const lineage = [sourceCollection?.name, sourceTemplate?.name]
@@ -397,9 +374,9 @@ export default function EvaluationDetail() {
             <Pressable
               onPress={exitSelectMode}
               hitSlop={10}
-              style={({ pressed }) => [
+              style={({ pressed: p }) => [
                 styles.headerPill,
-                pressed && styles.pressed,
+                p && pressed.default,
               ]}>
               <Text style={styles.headerPillText}>Cancel</Text>
             </Pressable>
@@ -409,9 +386,9 @@ export default function EvaluationDetail() {
                 <Pressable
                   onPress={enterSelectMode}
                   hitSlop={10}
-                  style={({ pressed }) => [
+                  style={({ pressed: p }) => [
                     styles.headerPill,
-                    pressed && styles.pressed,
+                    p && pressed.default,
                   ]}>
                   <Text style={styles.headerPillText}>Compare</Text>
                 </Pressable>
@@ -421,9 +398,9 @@ export default function EvaluationDetail() {
                 hitSlop={10}
                 accessibilityRole="button"
                 accessibilityLabel="More options"
-                style={({ pressed }) => [
+                style={({ pressed: p }) => [
                   styles.menuBtn,
-                  pressed && styles.pressed,
+                  p && pressed.default,
                 ]}>
                 <Text style={styles.menuBtnText}>⋯</Text>
               </Pressable>
@@ -468,9 +445,9 @@ export default function EvaluationDetail() {
             <Pressable
               onPress={onOpenMenu}
               hitSlop={6}
-              style={({ pressed }) => [
+              style={({ pressed: p }) => [
                 styles.shareStatusRow,
-                pressed && styles.pressed,
+                p && pressed.default,
               ]}>
               <View style={styles.shareStatusDot} />
               <Text style={styles.shareStatusText}>
@@ -544,36 +521,14 @@ export default function EvaluationDetail() {
             )}
           </View>
 
-          {!selectMode && !isShared && <View style={styles.addRow}>
-            <TextInput
-              style={styles.addInput}
+          {!selectMode && !isShared && (
+            <AddItemRow
               value={newParticipantName}
               onChangeText={setNewParticipantName}
+              onAdd={onAddParticipant}
               placeholder="Add a participant…"
-              placeholderTextColor={colors.textMute}
-              returnKeyType="done"
-              autoCapitalize="words"
-              autoCorrect={false}
-              onSubmitEditing={onAddParticipant}
-              maxLength={40}
             />
-            <Pressable
-              onPress={onAddParticipant}
-              disabled={!newParticipantName.trim()}
-              style={({ pressed }) => [
-                styles.addBtn,
-                !newParticipantName.trim() && styles.addBtnDisabled,
-                pressed && newParticipantName.trim() && styles.pressed,
-              ]}>
-              <Text
-                style={[
-                  styles.addBtnText,
-                  !newParticipantName.trim() && styles.addBtnTextDisabled,
-                ]}>
-                Add
-              </Text>
-            </Pressable>
-          </View>}
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -587,10 +542,10 @@ export default function EvaluationDetail() {
           <Pressable
             onPress={onCompare}
             disabled={selected.size < 2}
-            style={({ pressed }) => [
+            style={({ pressed: p }) => [
               styles.compareBtn,
               selected.size < 2 && styles.compareBtnDisabled,
-              pressed && selected.size >= 2 && styles.pressed,
+              p && selected.size >= 2 && pressed.default,
             ]}>
             <Text
               style={[
@@ -654,58 +609,29 @@ const ParticipantRow = memo(function ParticipantRow({
     });
 
   const onConfirmRemove = () =>
-    Alert.alert(
-      `Remove ${participant.name}?`,
-      'All their scores will be deleted.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => deleteParticipant(participant.id, evaluationId),
-        },
-      ],
-    );
+    confirmDestructive({
+      title: `Remove ${participant.name}?`,
+      message: 'All their scores will be deleted.',
+      confirmLabel: 'Remove',
+      onConfirm: () => deleteParticipant(participant.id, evaluationId),
+    });
 
   const onLongPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     const toggleLabel = participant.excluded ? 'Include' : 'Exclude';
     // Soft freeze: Remove is dropped from the menu while the evaluation
     // is shared, so the snapshot voters see can't shrink under them.
-    const iosOptions = shared
-      ? [toggleLabel, 'Cancel']
-      : [toggleLabel, 'Remove', 'Cancel'];
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          title: participant.name,
-          options: iosOptions,
-          destructiveButtonIndex: shared ? undefined : 1,
-          cancelButtonIndex: iosOptions.length - 1,
-          userInterfaceStyle: themeName,
-        },
-        (index) => {
-          if (index === 0) onToggleExcluded();
-          else if (!shared && index === 1) onConfirmRemove();
-        },
-      );
-    } else {
-      const buttons = shared
-        ? [
-            { text: toggleLabel, onPress: onToggleExcluded },
-            { text: 'Cancel', style: 'cancel' as const },
-          ]
-        : [
-            { text: toggleLabel, onPress: onToggleExcluded },
-            {
-              text: 'Remove',
-              style: 'destructive' as const,
-              onPress: onConfirmRemove,
-            },
-            { text: 'Cancel', style: 'cancel' as const },
-          ];
-      Alert.alert(participant.name, undefined, buttons);
-    }
+    const actions = shared
+      ? [{ label: toggleLabel, onPress: onToggleExcluded }]
+      : [
+          { label: toggleLabel, onPress: onToggleExcluded },
+          {
+            label: 'Remove',
+            destructive: true,
+            onPress: onConfirmRemove,
+          },
+        ];
+    showActionSheet({ title: participant.name, actions, themeName });
   };
 
   return (
@@ -720,11 +646,11 @@ const ParticipantRow = memo(function ParticipantRow({
           : `Open ${participant.name}'s profile`
       }
       accessibilityState={selectMode ? { selected } : undefined}
-      style={({ pressed }) => [
+      style={({ pressed: p }) => [
         styles.row,
         participant.excluded && styles.rowExcluded,
         selectMode && selected && styles.rowSelected,
-        pressed && styles.pressed,
+        p && pressed.default,
       ]}>
       {selectMode ? (
         <Animated.View
@@ -803,11 +729,11 @@ const ConsensusRow = memo(function ConsensusRow({
         selectMode ? 'Select Consensus' : 'Open Consensus details'
       }
       accessibilityState={selectMode ? { selected } : undefined}
-      style={({ pressed }) => [
+      style={({ pressed: p }) => [
         styles.row,
         styles.consensusRow,
         selectMode && selected && styles.rowSelected,
-        pressed && styles.pressed,
+        p && pressed.default,
       ]}>
       {selectMode ? (
         <View
@@ -1022,31 +948,4 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   rowRank: { ...type.caption, color: t.colors.textDim, marginTop: 2 },
   rowOvrMuted: { ...type.h3, color: t.colors.textMute },
   chevron: { ...type.h2, color: t.colors.textMute, marginLeft: spacing.xs },
-  addRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.lg,
-    gap: spacing.sm,
-  },
-  addInput: {
-    ...type.body,
-    flex: 1,
-    color: t.colors.text,
-    backgroundColor: t.colors.bgElev,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: t.colors.border,
-  },
-  addBtn: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radii.lg,
-    backgroundColor: t.colors.accent,
-  },
-  addBtnDisabled: { backgroundColor: t.colors.bgElev2 },
-  addBtnText: { ...type.h3, color: t.colors.onAccent },
-  addBtnTextDisabled: { color: t.colors.textMute },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

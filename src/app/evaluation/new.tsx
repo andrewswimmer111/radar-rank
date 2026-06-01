@@ -26,7 +26,7 @@ import {
   type Template,
 } from '@/db/hooks';
 import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
-import { radii, spacing, type } from '@/design/tokens';
+import { pressed, radii, spacing, type } from '@/design/tokens';
 
 export default function NewEvaluation() {
   const insets = useSafeAreaInsets();
@@ -99,7 +99,7 @@ export default function NewEvaluation() {
             onPress={() =>
               router.replace(colls.length === 0 ? '/collections' : '/templates')
             }
-            style={({ pressed }) => [styles.missingCta, pressed && styles.pressed]}>
+            style={({ pressed: p }) => [styles.missingCta, p && pressed.default]}>
             <Text style={styles.missingCtaText}>
               Go to {colls.length === 0 ? 'Collections' : 'Templates'}
             </Text>
@@ -200,10 +200,10 @@ export default function NewEvaluation() {
         <Pressable
           onPress={onCreate}
           disabled={!valid}
-          style={({ pressed }) => [
+          style={({ pressed: p }) => [
             styles.cta,
             !valid && styles.ctaDisabled,
-            pressed && valid && styles.pressed,
+            p && valid && pressed.default,
           ]}>
           {busy ? (
             <ActivityIndicator color={colors.onAccent} />
@@ -247,10 +247,10 @@ function CollectionPickRow({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
+      style={({ pressed: p }) => [
         styles.pickRow,
         selected && styles.pickRowSelected,
-        pressed && styles.pressed,
+        p && pressed.default,
       ]}>
       <View style={{ flex: 1 }}>
         <Text style={styles.pickName}>{collection.name}</Text>
@@ -277,10 +277,10 @@ function TemplatePickRow({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
+      style={({ pressed: p }) => [
         styles.pickRow,
         selected && styles.pickRowSelected,
-        pressed && styles.pressed,
+        p && pressed.default,
       ]}>
       <LinearGradient
         colors={[template.accent.start, template.accent.end]}
@@ -423,5 +423,4 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   ctaDisabled: { backgroundColor: t.colors.bgElev2 },
   ctaText: { ...type.h2, color: t.colors.onAccent },
   ctaTextDisabled: { color: t.colors.textMute },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

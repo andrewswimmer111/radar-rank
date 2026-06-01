@@ -61,6 +61,14 @@ export const fonts = {
   bodySemi: 'Inter_600SemiBold',
 } as const;
 
+// Standard press-down feedback. Used on every Pressable in the app so
+// touch affordance reads consistently. The softer variant is for cards
+// and rows where the scale animation would feel exaggerated.
+export const pressed = {
+  default: { opacity: 0.92, transform: [{ scale: 0.98 }] as const },
+  soft: { opacity: 0.85 },
+} as const;
+
 export const type = {
   hero: { fontFamily: fonts.displayExtra, fontSize: 40, lineHeight: 44, letterSpacing: -1.2 },
   h1: { fontFamily: fonts.display, fontSize: 30, lineHeight: 34, letterSpacing: -0.9 },

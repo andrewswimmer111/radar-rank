@@ -1,13 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import {
-  ActionSheetIOS,
-  Alert,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   useThemeController,
@@ -15,12 +7,15 @@ import {
   type Theme,
   type ThemeName,
 } from '@/design/theme';
-import { radii, spacing, type } from '@/design/tokens';
+import { pressed, radii, spacing, type } from '@/design/tokens';
+import { showActionSheet } from '@/lib/dialog';
 import type { SortMode } from '@/lib/stats';
+
+type Categories = readonly { key: string; label: string }[];
 
 type Props = {
   mode: SortMode;
-  categories: readonly { key: string; label: string }[];
+  categories: Categories;
   onChange: (mode: SortMode) => void;
 };
 
@@ -31,7 +26,7 @@ export function SortMenu({ mode, categories, onChange }: Props) {
 
   const onPress = () => {
     Haptics.selectionAsync().catch(() => {});
-    openSortSheet({ categories, onChange, userInterfaceStyle: name });
+    openSortSheet({ categories, onChange, themeName: name });
   };
 
   return (
@@ -39,7 +34,7 @@ export function SortMenu({ mode, categories, onChange }: Props) {
       <Pressable
         onPress={onPress}
         hitSlop={10}
-        style={({ pressed }) => [styles.chip, pressed && styles.pressed]}>
+        style={({ pressed: p }) => [styles.chip, p && pressed.soft]}>
         <Text style={styles.chipLabel}>Sort:</Text>
         <Text style={styles.chipValue} numberOfLines={1}>
           {label}
@@ -50,10 +45,7 @@ export function SortMenu({ mode, categories, onChange }: Props) {
   );
 }
 
-function modeLabel(
-  mode: SortMode,
-  categories: readonly { key: string; label: string }[],
-): string {
+function modeLabel(mode: SortMode, categories: Categories): string {
   switch (mode.kind) {
     case 'manual':
       return 'Manual';
@@ -70,109 +62,42 @@ function modeLabel(
   }
 }
 
-function openSortSheet({
-  categories,
-  onChange,
-  userInterfaceStyle,
-}: {
-  categories: readonly { key: string; label: string }[];
+function openSortSheet(opts: {
+  categories: Categories;
   onChange: (mode: SortMode) => void;
-  userInterfaceStyle: ThemeName;
-}) {
-  const baseOptions = [
-    'Manual',
-    'Alphabetical',
-    'Highest OVR',
-    'Most Balanced',
+  themeName: ThemeName;
+}): void {
+  const { categories, onChange, themeName } = opts;
+  const actions = [
+    { label: 'Manual', onPress: () => onChange({ kind: 'manual' }) },
+    { label: 'Alphabetical', onPress: () => onChange({ kind: 'alpha' }) },
+    { label: 'Highest OVR', onPress: () => onChange({ kind: 'ovrDesc' }) },
+    { label: 'Most Balanced', onPress: () => onChange({ kind: 'mostBalanced' }) },
   ];
-  const strongestLabel = 'Strongest in…';
-  const showStrongest = categories.length > 0;
-
-  if (Platform.OS === 'ios') {
-    const options = showStrongest
-      ? [...baseOptions, strongestLabel, 'Cancel']
-      : [...baseOptions, 'Cancel'];
-    const cancelIndex = options.length - 1;
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        title: 'Sort by',
-        options,
-        cancelButtonIndex: cancelIndex,
-        userInterfaceStyle,
-      },
-      (index) => {
-        if (index === undefined || index === cancelIndex) return;
-        if (index === 0) onChange({ kind: 'manual' });
-        else if (index === 1) onChange({ kind: 'alpha' });
-        else if (index === 2) onChange({ kind: 'ovrDesc' });
-        else if (index === 3) onChange({ kind: 'mostBalanced' });
-        else if (index === 4 && showStrongest) {
-          openCategorySheet({ categories, onChange, userInterfaceStyle });
-        }
-      },
-    );
-    return;
+  if (categories.length > 0) {
+    actions.push({
+      label: 'Strongest in…',
+      onPress: () => openCategorySheet({ categories, onChange, themeName }),
+    });
   }
-
-  const buttons = [
-    { text: 'Manual', onPress: () => onChange({ kind: 'manual' }) },
-    { text: 'Alphabetical', onPress: () => onChange({ kind: 'alpha' }) },
-    { text: 'Highest OVR', onPress: () => onChange({ kind: 'ovrDesc' }) },
-    { text: 'Most Balanced', onPress: () => onChange({ kind: 'mostBalanced' }) },
-    ...(showStrongest
-      ? [
-          {
-            text: strongestLabel,
-            onPress: () =>
-              openCategorySheet({ categories, onChange, userInterfaceStyle }),
-          },
-        ]
-      : []),
-    { text: 'Cancel', style: 'cancel' as const },
-  ];
-  Alert.alert('Sort by', undefined, buttons);
+  showActionSheet({ title: 'Sort by', actions, themeName });
 }
 
-function openCategorySheet({
-  categories,
-  onChange,
-  userInterfaceStyle,
-}: {
-  categories: readonly { key: string; label: string }[];
+function openCategorySheet(opts: {
+  categories: Categories;
   onChange: (mode: SortMode) => void;
-  userInterfaceStyle: ThemeName;
-}) {
+  themeName: ThemeName;
+}): void {
+  const { categories, onChange, themeName } = opts;
   if (categories.length === 0) return;
-  const labels = categories.map((c) => c.label);
-
-  if (Platform.OS === 'ios') {
-    const options = [...labels, 'Cancel'];
-    const cancelIndex = labels.length;
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        title: 'Strongest in…',
-        options,
-        cancelButtonIndex: cancelIndex,
-        userInterfaceStyle,
-      },
-      (index) => {
-        if (index === undefined || index === cancelIndex) return;
-        const cat = categories[index];
-        if (cat) onChange({ kind: 'strongestIn', categoryKey: cat.key });
-      },
-    );
-    return;
-  }
-
-  const buttons = [
-    ...categories.map((c) => ({
-      text: c.label,
-      onPress: () =>
-        onChange({ kind: 'strongestIn', categoryKey: c.key }),
+  showActionSheet({
+    title: 'Strongest in…',
+    actions: categories.map((c) => ({
+      label: c.label,
+      onPress: () => onChange({ kind: 'strongestIn', categoryKey: c.key }),
     })),
-    { text: 'Cancel', style: 'cancel' as const },
-  ];
-  Alert.alert('Strongest in…', undefined, buttons);
+    themeName,
+  });
 }
 
 const makeStyles = (t: Theme) => StyleSheet.create({
@@ -188,5 +113,4 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   chipLabel: { ...type.caption, color: t.colors.textMute },
   chipValue: { ...type.label, color: t.colors.text },
   chipChevron: { ...type.label, color: t.colors.textMute, marginLeft: -2 },
-  pressed: { opacity: 0.7 },
 });

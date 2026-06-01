@@ -17,7 +17,7 @@ import {
   type TemplateCategory,
 } from '@/db/hooks';
 import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
-import { radii, spacing, type } from '@/design/tokens';
+import { pressed, radii, spacing, type } from '@/design/tokens';
 
 export default function TemplateView() {
   const insets = useSafeAreaInsets();
@@ -105,7 +105,7 @@ export default function TemplateView() {
         ]}>
         <Pressable
           onPress={onPrimary}
-          style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
+          style={({ pressed: p }) => [styles.cta, p && pressed.default]}>
           <Text style={styles.ctaText}>
             {isBuiltin ? 'Duplicate to customize' : 'Edit template'}
           </Text>
@@ -206,5 +206,4 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     backgroundColor: t.colors.accent,
   },
   ctaText: { ...type.h2, color: t.colors.onAccent },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

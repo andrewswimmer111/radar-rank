@@ -1,7 +1,7 @@
 import { SymbolView } from 'expo-symbols';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii, spacing, type } from '@/design/tokens';
+import { colors, pressed, radii, spacing, type } from '@/design/tokens';
 
 // Full-screen, provider-independent error state. Used both for DB-init
 // failures (rendered inside the root layout) and for render-phase screen
@@ -32,7 +32,7 @@ export function ErrorScreen({
       <Text style={styles.body}>{message}</Text>
       <Pressable
         onPress={onRetry}
-        style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
+        style={({ pressed: p }) => [styles.cta, p && pressed.default]}>
         <Text style={styles.ctaText}>Try again</Text>
       </Pressable>
     </View>
@@ -75,5 +75,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
   },
   ctaText: { ...type.h3, color: colors.bg },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

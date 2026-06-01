@@ -30,7 +30,7 @@ import {
   useTemplate,
 } from '@/db/hooks';
 import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
-import { radii, spacing, type } from '@/design/tokens';
+import { pressed, radii, spacing, type } from '@/design/tokens';
 import { exportFilename, snapshotCanvasToFile } from '@/lib/exportCard';
 import { DEFAULT_ACCENT } from '@/lib/accentPresets';
 import {
@@ -300,9 +300,9 @@ export default function ProfileScreen() {
         <Pressable
           onPress={onSave}
           disabled={!!busy}
-          style={({ pressed }) => [
+          style={({ pressed: p }) => [
             styles.actionGhost,
-            pressed && styles.pressed,
+            p && pressed.default,
             !!busy && styles.actionBusy,
           ]}>
           {busy === 'save' ? (
@@ -314,9 +314,9 @@ export default function ProfileScreen() {
         <Pressable
           onPress={onShare}
           disabled={!!busy}
-          style={({ pressed }) => [
+          style={({ pressed: p }) => [
             styles.actionPrimary,
-            pressed && styles.pressed,
+            p && pressed.default,
             !!busy && styles.actionBusy,
           ]}>
           {busy === 'share' ? (
@@ -423,5 +423,4 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   },
   actionPrimaryText: { ...type.h3, color: t.colors.onAccent },
   actionBusy: { opacity: 0.7 },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

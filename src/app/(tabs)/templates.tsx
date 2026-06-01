@@ -1,45 +1,36 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SettingsGearButton } from '@/components/SettingsGearButton';
+import {
+  TabContent,
+  TabErrorBox,
+  TabHeader,
+  TabLoading,
+  TabScreen,
+} from '@/components/TabScreen';
 import { useTemplates, type Template } from '@/db/hooks';
-import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
-import { radii, spacing, type } from '@/design/tokens';
+import { useThemedStyles, type Theme } from '@/design/theme';
+import { pressed, radii, spacing, type } from '@/design/tokens';
 
 export default function TemplatesTab() {
-  const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const { data, loading, error } = useTemplates();
 
   if (loading && !data) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.textDim} />
-        </View>
-      </SafeAreaView>
+      <TabScreen>
+        <TabLoading />
+      </TabScreen>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>Couldn&apos;t load templates.</Text>
-          <Text style={styles.errorSub}>{error.message}</Text>
-        </View>
-      </SafeAreaView>
+      <TabScreen>
+        <TabErrorBox message={error.message} />
+      </TabScreen>
     );
   }
 
@@ -48,26 +39,12 @@ export default function TemplatesTab() {
   const customs = all.filter((t) => !t.isBuiltin);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Templates</Text>
-        <View style={styles.headerActions}>
-          <SettingsGearButton />
-          <Pressable
-            onPress={() => router.push('/template/new')}
-            hitSlop={10}
-            style={({ pressed }) => [styles.newBtn, pressed && styles.pressed]}>
-            <Text style={styles.newBtnText}>+ New</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingBottom: insets.bottom + spacing.xxxl },
-        ]}
-        showsVerticalScrollIndicator={false}>
+    <TabScreen>
+      <TabHeader
+        title="Templates"
+        onNewPress={() => router.push('/template/new')}
+      />
+      <TabContent gap={spacing.xxl}>
         <Section title="Starters" caption="Curated rubrics to start from.">
           {builtins.map((t, i) => (
             <TemplateCard key={t.id} template={t} index={i} />
@@ -89,8 +66,8 @@ export default function TemplatesTab() {
             ))
           )}
         </Section>
-      </ScrollView>
-    </SafeAreaView>
+      </TabContent>
+    </TabScreen>
   );
 }
 
@@ -121,7 +98,7 @@ function TemplateCard({ template, index }: { template: Template; index: number }
     <Animated.View entering={FadeInDown.duration(360).delay(60 + index * 40)}>
       <Pressable
         onPress={() => router.push(`/template/${template.id}`)}
-        style={({ pressed }) => [pressed && styles.pressed]}>
+        style={({ pressed: p }) => [p && pressed.default]}>
         <LinearGradient
           colors={[template.accent.start, template.accent.end]}
           start={{ x: 0, y: 0 }}
@@ -142,37 +119,6 @@ function TemplateCard({ template, index }: { template: Template; index: number }
 }
 
 const makeStyles = (t: Theme) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: t.colors.bg },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  errorBox: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-    gap: spacing.sm,
-  },
-  errorText: { ...type.h3, color: t.colors.text },
-  errorSub: { ...type.body, color: t.colors.textDim, textAlign: 'center' },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
-  },
-  title: { ...type.hero, color: t.colors.text },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  newBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
-    borderRadius: radii.pill,
-    backgroundColor: t.colors.bgElev,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: t.colors.border,
-  },
-  newBtnText: { ...type.label, color: t.colors.text },
-  scroll: { paddingHorizontal: spacing.xl, gap: spacing.xxl },
   section: { gap: spacing.md },
   sectionHeader: { gap: 4 },
   sectionTitle: {
@@ -208,5 +154,4 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     textAlign: 'center',
   },
   emptyYoursAccent: { color: t.colors.accent },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
 });

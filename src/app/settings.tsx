@@ -19,7 +19,7 @@ import {
   useThemedStyles,
   type Theme,
 } from '@/design/theme';
-import { radii, spacing, type } from '@/design/tokens';
+import { pressed, radii, spacing, type } from '@/design/tokens';
 import {
   applyBackup,
   exportBackupToFile,
@@ -27,6 +27,7 @@ import {
   type BackupV1,
   type RestoreMode,
 } from '@/lib/backup';
+import { confirmDestructive } from '@/lib/dialog';
 
 const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -92,25 +93,20 @@ export default function SettingsScreen() {
   };
 
   const onDeleteAll = () => {
-    Alert.alert(
-      'Delete all data?',
-      'Removes every collection, custom template, and evaluation on this device. Built-in templates remain. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete everything',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteAllData();
-              Alert.alert('Done', 'All your data has been deleted.');
-            } catch (e) {
-              Alert.alert('Delete failed', msg(e));
-            }
-          },
-        },
-      ],
-    );
+    confirmDestructive({
+      title: 'Delete all data?',
+      message:
+        'Removes every collection, custom template, and evaluation on this device. Built-in templates remain. This cannot be undone.',
+      confirmLabel: 'Delete everything',
+      onConfirm: async () => {
+        try {
+          await deleteAllData();
+          Alert.alert('Done', 'All your data has been deleted.');
+        } catch (e) {
+          Alert.alert('Delete failed', msg(e));
+        }
+      },
+    });
   };
 
   return (
@@ -169,7 +165,7 @@ export default function SettingsScreen() {
         <View style={[styles.card, styles.dangerCard]}>
           <Pressable
             onPress={onDeleteAll}
-            style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+            style={({ pressed: p }) => [styles.row, p && pressed.soft]}>
             <Text style={styles.dangerText}>Delete all my data</Text>
           </Pressable>
         </View>
@@ -220,7 +216,7 @@ function ActionRow({
       disabled={busy}
       accessibilityRole="button"
       accessibilityLabel={title}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+      style={({ pressed: p }) => [styles.row, p && pressed.soft]}>
       <View style={{ flex: 1 }}>
         <Text style={styles.rowTitle}>{title}</Text>
         <Text style={styles.rowSubtitle}>{subtitle}</Text>
@@ -295,5 +291,4 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   segTextActive: { color: t.colors.onAccent },
   dangerCard: { marginTop: spacing.xl },
   dangerText: { ...type.h3, color: t.colors.danger },
-  pressed: { opacity: 0.85 },
 });

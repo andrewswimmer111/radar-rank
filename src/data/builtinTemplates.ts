@@ -1,7 +1,7 @@
 // Curated starter templates seeded into the templates table on first
 // launch. Stable IDs so a reinstall produces the same rows. Sprint 1
-// scope assumes at most 3 built-ins; the gallery and any percentile
-// math should tolerate the count but not depend on which three.
+// scope assumes at most 2 built-ins; the gallery and any percentile
+// math should tolerate the count but not depend on which two.
 
 export type BuiltinCategory = {
   key: string;
@@ -29,20 +29,6 @@ export const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
       { key: 'swimming', label: 'Swimming' },
       { key: 'running', label: 'Running' },
       { key: 'coordination', label: 'Coordination' },
-    ],
-  },
-  {
-    id: 'builtin-roommate-profile',
-    name: 'Roommate Profile',
-    blurb: 'Living compatibility, quantified through observation and opinion.',
-    accent: { start: '#8B8CFF', end: '#5CC8FF', glow: '#7AA9FF' },
-    categories: [
-      { key: 'cleanliness', label: 'Cleanliness' },
-      { key: 'noise_awareness', label: 'Noise Awareness' },
-      { key: 'bill_reliability', label: 'Bill Reliability' },
-      { key: 'kitchen_etiquette', label: 'Kitchen Etiquette' },
-      { key: 'guest_management', label: 'Guest Management' },
-      { key: 'overall_vibes', label: 'Overall Vibes' },
     ],
   },
   {

@@ -1,7 +1,6 @@
 import { type ReactNode } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,13 +10,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { SettingsGearButton } from '@/components/SettingsGearButton';
 import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
-import { pressed, radii, spacing, type } from '@/design/tokens';
+import { spacing, type } from '@/design/tokens';
 
 // The three top-level tabs (Evaluations / Collections / Templates) all
 // share the same chrome: SafeAreaView fill, a header row with the screen
-// title + Settings gear + an optional "+ New" pill, then a scrolling
-// content list. This module pulls that chrome into reusable pieces so
-// each tab file only describes what it lists.
+// title + Settings gear, then a scrolling content list. This module pulls
+// that chrome into reusable pieces so each tab file only describes what
+// it lists.
 
 export function TabScreen({ children }: { children: ReactNode }) {
   const styles = useThemedStyles(makeStyles);
@@ -33,8 +32,8 @@ export function TabContent({
   gap = spacing.md,
 }: {
   children: ReactNode;
-  // Defaults to row spacing for the typical list-of-cards tab. The Templates
-  // tab passes a larger value because it stacks sections instead of rows.
+  // Defaults to row spacing for the typical list-of-cards tab. Tabs that
+  // stack sections pass a larger value.
   gap?: number;
 }) {
   const insets = useSafeAreaInsets();
@@ -51,38 +50,13 @@ export function TabContent({
   );
 }
 
-// Use when the tab has zero content. Renders only the gear so users can
-// still reach Settings without a list header.
-export function TabBareTopBar() {
-  const styles = useThemedStyles(makeStyles);
-  return (
-    <View style={styles.topBar}>
-      <SettingsGearButton />
-    </View>
-  );
-}
-
-export function TabHeader({
-  title,
-  onNewPress,
-}: {
-  title: string;
-  onNewPress?: () => void;
-}) {
+export function TabHeader({ title }: { title: string }) {
   const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.headerRow}>
       <Text style={styles.title}>{title}</Text>
       <View style={styles.headerActions}>
         <SettingsGearButton />
-        {onNewPress && (
-          <Pressable
-            onPress={onNewPress}
-            hitSlop={10}
-            style={({ pressed: p }) => [styles.newBtn, p && pressed.default]}>
-            <Text style={styles.newBtnText}>+ New</Text>
-          </Pressable>
-        )}
       </View>
     </View>
   );
@@ -121,12 +95,6 @@ const makeStyles = (t: Theme) =>
     },
     errorText: { ...type.h3, color: t.colors.text },
     errorSub: { ...type.body, color: t.colors.textDim, textAlign: 'center' },
-    topBar: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      paddingHorizontal: spacing.xl,
-      paddingTop: spacing.md,
-    },
     headerRow: {
       flexDirection: 'row',
       alignItems: 'flex-end',
@@ -141,14 +109,5 @@ const makeStyles = (t: Theme) =>
       alignItems: 'center',
       gap: spacing.sm,
     },
-    newBtn: {
-      paddingHorizontal: spacing.md,
-      paddingVertical: 8,
-      borderRadius: radii.pill,
-      backgroundColor: t.colors.bgElev,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: t.colors.border,
-    },
-    newBtnText: { ...type.label, color: t.colors.text },
     list: { paddingHorizontal: spacing.xl },
   });

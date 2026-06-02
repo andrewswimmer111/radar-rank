@@ -1,11 +1,9 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { memo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { EmptyState } from '@/components/EmptyState';
 import {
-  TabBareTopBar,
   TabContent,
   TabHeader,
   TabScreen,
@@ -19,38 +17,77 @@ import { useThemedStyles, type Theme } from '@/design/theme';
 import { pressed, radii, spacing, type } from '@/design/tokens';
 import { timeAgo } from '@/lib/timeAgo';
 
+const isStarter = (id: string) => id.startsWith('builtin-');
+
 export default function EvaluationsTab() {
   const { data } = useEvaluations();
-  const evaluations = data ?? [];
-
-  if (evaluations.length === 0) {
-    return (
-      <TabScreen>
-        <TabBareTopBar />
-        <EmptyState
-          icon="chart.dots.scatter"
-          eyebrow="Evaluations"
-          headline="Make your first ranking."
-          body="Combine a collection with a template to create a working evaluation space."
-          ctaLabel="Create your first evaluation"
-          onCtaPress={() => router.push('/evaluation/new')}
-        />
-      </TabScreen>
-    );
-  }
+  const all = data ?? [];
+  const starters = all.filter((e) => isStarter(e.id));
+  const yours = all.filter((e) => !isStarter(e.id));
 
   return (
     <TabScreen>
-      <TabHeader
-        title="Evaluations"
-        onNewPress={() => router.push('/evaluation/new')}
-      />
-      <TabContent>
-        {evaluations.map((e, i) => (
-          <EvaluationRow key={e.id} evaluation={e} index={i} />
-        ))}
+      <TabHeader title="Evaluations" />
+      <TabContent gap={spacing.xxl}>
+        <Section title="Yours" caption="Rankings you've started.">
+          <NewEvaluationCta />
+          {yours.map((e, i) => (
+            <EvaluationRow key={e.id} evaluation={e} index={i} />
+          ))}
+        </Section>
+
+        {starters.length > 0 && (
+          <Section
+            title="Starters"
+            caption="A sample ranking to explore."
+          >
+            {starters.map((e, i) => (
+              <EvaluationRow
+                key={e.id}
+                evaluation={e}
+                index={yours.length + i}
+              />
+            ))}
+          </Section>
+        )}
       </TabContent>
     </TabScreen>
+  );
+}
+
+function Section({
+  title,
+  caption,
+  children,
+}: {
+  title: string;
+  caption: string;
+  children: React.ReactNode;
+}) {
+  const styles = useThemedStyles(makeStyles);
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={styles.sectionCaption}>{caption}</Text>
+      </View>
+      <View style={styles.sectionBody}>{children}</View>
+    </View>
+  );
+}
+
+function NewEvaluationCta() {
+  const styles = useThemedStyles(makeStyles);
+  return (
+    <Pressable
+      onPress={() => router.push('/evaluation/new')}
+      accessibilityRole="button"
+      accessibilityLabel="Start a new evaluation"
+      style={({ pressed: p }) => [styles.ctaBlock, p && pressed.default]}>
+      <Text style={styles.ctaText}>
+        <Text style={styles.ctaAccent}>+ </Text>Start a new evaluation
+      </Text>
+    </Pressable>
   );
 }
 
@@ -90,6 +127,15 @@ const EvaluationRow = memo(function EvaluationRow({
 });
 
 const makeStyles = (t: Theme) => StyleSheet.create({
+  section: { gap: spacing.md },
+  sectionHeader: { gap: 4 },
+  sectionTitle: {
+    ...type.eyebrow,
+    color: t.colors.accent,
+    textTransform: 'uppercase',
+  },
+  sectionCaption: { ...type.caption, color: t.colors.textMute },
+  sectionBody: { gap: spacing.md },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -106,4 +152,18 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   rowTitle: { ...type.h3, color: t.colors.text },
   rowSubtitle: { ...type.caption, color: t.colors.textDim },
   chevron: { ...type.h2, color: t.colors.textMute },
+  ctaBlock: {
+    backgroundColor: t.colors.bgElev,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: t.colors.border,
+  },
+  ctaText: {
+    ...type.body,
+    color: t.colors.textDim,
+    textAlign: 'center',
+  },
+  ctaAccent: { color: t.colors.accent },
 });

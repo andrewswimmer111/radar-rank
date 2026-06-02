@@ -15,7 +15,6 @@ import { useThemedStyles, type Theme } from '@/design/theme';
 import { pressed, radii, spacing, type } from '@/design/tokens';
 
 export default function TemplatesTab() {
-  const styles = useThemedStyles(makeStyles);
   const { data, loading, error } = useTemplates();
 
   if (loading && !data) {
@@ -40,31 +39,23 @@ export default function TemplatesTab() {
 
   return (
     <TabScreen>
-      <TabHeader
-        title="Templates"
-        onNewPress={() => router.push('/template/new')}
-      />
+      <TabHeader title="Templates" />
       <TabContent gap={spacing.xxl}>
-        <Section title="Starters" caption="Curated rubrics to start from.">
-          {builtins.map((t, i) => (
+        <Section title="Yours" caption="Templates you've duplicated or built.">
+          <NewTemplateCta />
+          {customs.map((t, i) => (
             <TemplateCard key={t.id} template={t} index={i} />
           ))}
         </Section>
 
-        <Section title="Yours" caption="Templates you've duplicated or built.">
-          {customs.length === 0 ? (
-            <View style={styles.emptyYours}>
-              <Text style={styles.emptyYoursText}>
-                Duplicate a starter or tap{' '}
-                <Text style={styles.emptyYoursAccent}>+ New</Text> to build one
-                from scratch.
-              </Text>
-            </View>
-          ) : (
-            customs.map((t, i) => (
-              <TemplateCard key={t.id} template={t} index={builtins.length + i} />
-            ))
-          )}
+        <Section title="Starters" caption="Curated rubrics to start from.">
+          {builtins.map((t, i) => (
+            <TemplateCard
+              key={t.id}
+              template={t}
+              index={customs.length + i}
+            />
+          ))}
         </Section>
       </TabContent>
     </TabScreen>
@@ -89,6 +80,21 @@ function Section({
       </View>
       <View style={styles.sectionBody}>{children}</View>
     </View>
+  );
+}
+
+function NewTemplateCta() {
+  const styles = useThemedStyles(makeStyles);
+  return (
+    <Pressable
+      onPress={() => router.push('/template/new')}
+      accessibilityRole="button"
+      accessibilityLabel="Build a new template from scratch"
+      style={({ pressed: p }) => [styles.ctaBlock, p && pressed.default]}>
+      <Text style={styles.ctaText}>
+        <Text style={styles.ctaAccent}>+ </Text>Build a new template from scratch
+      </Text>
+    </Pressable>
   );
 }
 
@@ -140,7 +146,7 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   cardBody: { flex: 1, gap: 2 },
   cardName: { ...type.h2, color: '#fff' },
   cardBlurb: { ...type.body, color: 'rgba(255,255,255,0.86)' },
-  emptyYours: {
+  ctaBlock: {
     backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingVertical: spacing.lg,
@@ -148,10 +154,10 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: t.colors.border,
   },
-  emptyYoursText: {
+  ctaText: {
     ...type.body,
     color: t.colors.textDim,
     textAlign: 'center',
   },
-  emptyYoursAccent: { color: t.colors.accent },
+  ctaAccent: { color: t.colors.accent },
 });

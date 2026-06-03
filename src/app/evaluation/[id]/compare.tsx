@@ -35,10 +35,7 @@ import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
 // surface, which stays dark in both themes (it's the branded data-viz panel,
 // mirroring the exported card). All chrome uses the active theme.
 import { colors as staticColors, radii, spacing, type } from '@/design/tokens';
-import {
-  CONSENSUS_ID,
-  type ConsensusMap,
-} from '@/lib/consensus';
+import { consensusToFlatScores } from '@/lib/consensus';
 import { pickPersonColor } from '@/lib/personColors';
 import { gradeFromScore } from '@/lib/stats';
 
@@ -53,7 +50,12 @@ export default function CompareScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const { width: SCREEN_W } = useWindowDimensions();
-  const { id, ids } = useLocalSearchParams<{ id: string; ids?: string }>();
+  const { id, ids, mode } = useLocalSearchParams<{
+    id: string;
+    ids?: string;
+    mode?: 'yours' | 'consensus';
+  }>();
+  const isConsensus = mode === 'consensus';
 
   const { data: evaluation } = useEvaluation(id);
   const { data: participants } = useParticipants(id);
@@ -68,52 +70,27 @@ export default function CompareScreen() {
     [categories],
   );
 
-  // The Consensus profile is synthesized client-side: for each category,
-  // average the consensus mean across all real participants. Returned as
-  // a Participant-shaped object so the rest of this screen — chart, legend,
-  // diff bars — can treat it identically to a regular selection.
-  const consensusEntry = useMemo<{
-    participant: Participant;
-    scores: Record<string, number>;
-  } | null>(() => {
-    if (!consensus || consensus.size === 0 || !participants) return null;
-    const scores = buildConsensusProfile(
-      consensus,
-      participants,
-      cats.map((c) => c.key),
-    );
-    const synthetic: Participant = {
-      id: CONSENSUS_ID,
-      evaluationId: id,
-      name: 'Consensus',
-      color: staticColors.accent,
-      excluded: false,
-      position: -1,
-      originPersonId: null,
-    };
-    return { participant: synthetic, scores };
-  }, [consensus, participants, cats, id]);
-
   const selected = useMemo<Selected[] | null>(() => {
     if (!participants) return null;
     const byId = new Map(participants.map((p) => [p.id, p]));
     const out: Selected[] = [];
     selectedIds.forEach((pid, i) => {
-      if (pid === CONSENSUS_ID) {
-        if (consensusEntry) {
-          out.push({ participant: consensusEntry.participant, paletteIndex: i });
-        }
-        return;
-      }
       const p = byId.get(pid);
       if (p) out.push({ participant: p, paletteIndex: i });
     });
     return out;
-  }, [participants, selectedIds, consensusEntry]);
+  }, [participants, selectedIds]);
 
+  // Same shape either way — Record<categoryKey, number> per participant —
+  // so the chart, legend, and diff rows below don't care which mode they're
+  // rendering. Consensus participants without votes simply don't appear in
+  // the map; downstream `?? 50` fallbacks handle the gaps.
   const scoresByParticipant = useMemo(() => {
+    const flat = isConsensus
+      ? consensusToFlatScores(consensus, cats.map((c) => c.key))
+      : scoresFlat ?? [];
     const out = new Map<string, Record<string, number>>();
-    for (const s of scoresFlat ?? []) {
+    for (const s of flat) {
       let m = out.get(s.participantId);
       if (!m) {
         m = {};
@@ -121,11 +98,8 @@ export default function CompareScreen() {
       }
       m[s.categoryKey] = s.value;
     }
-    if (consensusEntry) {
-      out.set(CONSENSUS_ID, consensusEntry.scores);
-    }
     return out;
-  }, [scoresFlat, consensusEntry]);
+  }, [isConsensus, consensus, scoresFlat, cats]);
 
   const topTrait = useMemo(() => {
     if (!selected || selected.length < 2 || cats.length === 0) return null;
@@ -232,6 +206,9 @@ export default function CompareScreen() {
           { paddingBottom: insets.bottom + spacing.xxl },
         ]}
         showsVerticalScrollIndicator={false}>
+        {isConsensus && (
+          <Text style={styles.modeBadge}>Based on consensus votes</Text>
+        )}
         {(topTrait || biggestGap) && (
           <View style={styles.callouts}>
             {topTrait && (
@@ -377,29 +354,6 @@ function parseIds(raw: string | undefined): string[] {
     .slice(0, 3);
 }
 
-// Synthesize a single voter-consensus profile across the whole group: for
-// each category, mean of (consensus mean for that category over all real
-// participants). Categories with no consensus data fall back to 50 so the
-// radar polygon stays well-formed.
-function buildConsensusProfile(
-  consensus: ConsensusMap,
-  participants: Participant[],
-  categoryKeys: string[],
-): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const key of categoryKeys) {
-    const means: number[] = [];
-    for (const p of participants) {
-      const stat = consensus.get(p.id)?.get(key);
-      if (stat) means.push(stat.mean);
-    }
-    out[key] = means.length > 0
-      ? Math.round(means.reduce((a, b) => a + b, 0) / means.length)
-      : 50;
-  }
-  return out;
-}
-
 const makeStyles = (t: Theme) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: t.colors.bg },
   center: {
@@ -410,6 +364,12 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     gap: spacing.sm,
   },
   muted: { ...type.body, color: t.colors.textDim, textAlign: 'center' },
+  modeBadge: {
+    ...type.eyebrow,
+    color: t.colors.accent,
+    textTransform: 'uppercase',
+    alignSelf: 'center',
+  },
   scroll: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,

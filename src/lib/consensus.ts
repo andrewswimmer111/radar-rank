@@ -1,10 +1,5 @@
 import type { VoteScore, VoteSubmission } from '../db/votes';
 
-// Sentinel id for the synthetic Consensus profile in compare-mode
-// selections. Must not collide with real participant ids (those are
-// short base36 strings from genId).
-export const CONSENSUS_ID = '__consensus';
-
 export type ConsensusStat = {
   // Mean rounded to the nearest int — scores are 0..100 ints so the
   // displayed value should be too.
@@ -18,6 +13,25 @@ export type ConsensusStat = {
 
 // participantId -> categoryKey -> stat
 export type ConsensusMap = Map<string, Map<string, ConsensusStat>>;
+
+// Flatten consensus means into the FlatScore shape used by stats.ts so
+// summary / sort / OVR logic can run against consensus data the same way
+// it runs against local scores.
+export function consensusToFlatScores(
+  consensus: ConsensusMap | null,
+  categoryKeys: readonly string[],
+): { participantId: string; categoryKey: string; value: number }[] {
+  if (!consensus) return [];
+  const allowed = new Set(categoryKeys);
+  const out: { participantId: string; categoryKey: string; value: number }[] = [];
+  for (const [participantId, inner] of consensus) {
+    for (const [categoryKey, stat] of inner) {
+      if (!allowed.has(categoryKey)) continue;
+      out.push({ participantId, categoryKey, value: stat.mean });
+    }
+  }
+  return out;
+}
 
 // Pure aggregation. No DB access, no async. Given the cached submissions +
 // scores for an evaluation, returns mean/variance/n per participant ×

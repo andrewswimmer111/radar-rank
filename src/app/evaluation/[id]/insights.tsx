@@ -11,6 +11,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { HeaderBar } from '@/components/HeaderBar';
 import {
+  useConsensus,
   useEvaluation,
   useEvaluationCategories,
   useParticipants,
@@ -18,6 +19,7 @@ import {
 } from '@/db/hooks';
 import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
 import { radii, spacing, type } from '@/design/tokens';
+import { consensusToFlatScores } from '@/lib/consensus';
 import {
   categoryVariance,
   closestPairs,
@@ -29,12 +31,17 @@ export default function InsightsScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, mode } = useLocalSearchParams<{
+    id: string;
+    mode?: 'yours' | 'consensus';
+  }>();
+  const isConsensus = mode === 'consensus';
 
   const { data: evaluation, loading } = useEvaluation(id);
   const { data: participants } = useParticipants(id);
   const { data: categories } = useEvaluationCategories(id);
-  const { data: scores } = useScores(id);
+  const { data: localScores } = useScores(id);
+  const consensus = useConsensus(id);
 
   const active = useMemo(
     () => (participants ?? []).filter((p) => !p.excluded),
@@ -53,7 +60,13 @@ export default function InsightsScreen() {
     () => new Map((categories ?? []).map((c) => [c.key, c.label])),
     [categories],
   );
-  const flatScores = useMemo(() => scores ?? [], [scores]);
+  const flatScores = useMemo(
+    () =>
+      isConsensus
+        ? consensusToFlatScores(consensus, categoryKeys)
+        : localScores ?? [],
+    [isConsensus, consensus, localScores, categoryKeys],
+  );
 
   const balanced = useMemo(
     () => mostBalancedParticipant(flatScores, activeIds, categoryKeys),
@@ -125,6 +138,9 @@ export default function InsightsScreen() {
         showsVerticalScrollIndicator={false}>
         <Text style={styles.title} numberOfLines={2}>
           {evaluation.title}
+        </Text>
+        <Text style={styles.subtitle}>
+          {isConsensus ? 'Based on consensus votes' : 'Based on your votes'}
         </Text>
 
         <View style={styles.cardRow}>
@@ -208,7 +224,13 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     paddingTop: spacing.md,
     gap: spacing.sm,
   },
-  title: { ...type.h1, color: t.colors.text, marginBottom: spacing.sm },
+  title: { ...type.h1, color: t.colors.text },
+  subtitle: {
+    ...type.caption,
+    color: t.colors.textMute,
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+  },
   cardRow: { flexDirection: 'row', gap: spacing.sm },
   statCard: {
     flex: 1,

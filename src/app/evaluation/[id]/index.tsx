@@ -32,6 +32,7 @@ import {
   updateEvaluation,
   updateParticipant,
   useCollection,
+  useConsensus,
   useEvaluation,
   useEvaluationCategories,
   useParticipants,
@@ -43,7 +44,7 @@ import {
 } from '@/db/hooks';
 import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
 import { pressed, radii, spacing, type } from '@/design/tokens';
-import { CONSENSUS_ID } from '@/lib/consensus';
+import { consensusToFlatScores } from '@/lib/consensus';
 import { confirmDestructive, showActionSheet } from '@/lib/dialog';
 import { pickPersonColor } from '@/lib/personColors';
 import {
@@ -72,7 +73,17 @@ export default function EvaluationDetail() {
   const { data: scores } = useScores(id);
   const { data: share } = useShare(id);
   const { data: voteCount } = useSubmissionCount(id);
+  const consensus = useConsensus(id);
   const isShared = !!share;
+  const hasVotes = (voteCount ?? 0) > 0;
+  // Tabs only appear once there's something to switch to. Default to
+  // "yours" so the screen reads identically pre-share.
+  const [tab, setTab] = useState<'yours' | 'consensus'>('yours');
+  // Fall back to "yours" when consensus data goes away (unshare, vote
+  // wipe) so we never leave the user looking at an empty consensus view.
+  useEffect(() => {
+    if (!hasVotes && tab === 'consensus') setTab('yours');
+  }, [hasVotes, tab]);
 
   // Pull cached submissions on mount + whenever this evaluation's share
   // identity changes (e.g. unshare → reshare rotates cloudId). Failures
@@ -164,7 +175,9 @@ export default function EvaluationDetail() {
   const onCompare = () => {
     if (selected.size < 2) return;
     const idsParam = Array.from(selected).join(',');
-    router.push(`/evaluation/${id}/compare?ids=${idsParam}`);
+    router.push(
+      `/evaluation/${id}/compare?ids=${idsParam}&mode=${tab}`,
+    );
   };
 
   const participantList = useMemo(() => participants ?? [], [participants]);
@@ -172,23 +185,33 @@ export default function EvaluationDetail() {
     () => (categories ?? []).map((c) => c.key),
     [categories],
   );
+  // Swap the underlying scores pool when the consensus tab is active.
+  // Everything downstream (summary, sort keys, OVRs, ranks) runs the
+  // same logic — only the source vector changes.
+  const effectiveScores = useMemo(
+    () =>
+      tab === 'consensus'
+        ? consensusToFlatScores(consensus, categoryKeys)
+        : scores ?? [],
+    [tab, consensus, categoryKeys, scores],
+  );
   const ovrMap = useMemo(
-    () => ovrByParticipant(scores ?? [], categoryKeys),
-    [scores, categoryKeys],
+    () => ovrByParticipant(effectiveScores, categoryKeys),
+    [effectiveScores, categoryKeys],
   );
   const spreadMap = useMemo(
-    () => spreadByParticipant(scores ?? [], categoryKeys),
-    [scores, categoryKeys],
+    () => spreadByParticipant(effectiveScores, categoryKeys),
+    [effectiveScores, categoryKeys],
   );
   const scoreInCategoryMap = useMemo(() => {
     if (sortMode.kind !== 'strongestIn') return undefined;
     const target = sortMode.categoryKey;
     const out = new Map<string, number>();
-    for (const s of scores ?? []) {
+    for (const s of effectiveScores) {
       if (s.categoryKey === target) out.set(s.participantId, s.value);
     }
     return out;
-  }, [scores, sortMode]);
+  }, [effectiveScores, sortMode]);
 
   const sortedParticipants = useMemo(() => {
     const comparator = compareParticipantsBy(sortMode, {
@@ -458,12 +481,17 @@ export default function EvaluationDetail() {
             </Pressable>
           )}
 
+          {hasVotes && !selectMode && (
+            <TabSwitch tab={tab} onChange={setTab} />
+          )}
+
           {!selectMode && (
             <EvaluationSummary
               evaluationId={id}
               participants={participantList}
               categories={categories ?? []}
-              scores={scores ?? []}
+              scores={effectiveScores}
+              mode={tab}
             />
           )}
 
@@ -489,15 +517,6 @@ export default function EvaluationDetail() {
           )}
 
           <View style={styles.list}>
-            {(voteCount ?? 0) > 0 && (
-              <ConsensusRow
-                evaluationId={id}
-                voteCount={voteCount ?? 0}
-                selectMode={selectMode}
-                selected={selected.has(CONSENSUS_ID)}
-                onToggleSelect={toggleSelect}
-              />
-            )}
             {sortedParticipants.map((p, i) => (
               <ParticipantRow
                 key={p.id}
@@ -699,63 +718,45 @@ const ParticipantRow = memo(function ParticipantRow({
   );
 });
 
-const ConsensusRow = memo(function ConsensusRow({
-  evaluationId,
-  voteCount,
-  selectMode,
-  selected,
-  onToggleSelect,
+function TabSwitch({
+  tab,
+  onChange,
 }: {
-  evaluationId: string;
-  voteCount: number;
-  selectMode: boolean;
-  selected: boolean;
-  onToggleSelect: (id: string) => void;
+  tab: 'yours' | 'consensus';
+  onChange: (next: 'yours' | 'consensus') => void;
 }) {
   const styles = useThemedStyles(makeStyles);
-  const onPress = () => {
-    if (selectMode) {
-      onToggleSelect(CONSENSUS_ID);
-      return;
-    }
-    router.push(`/evaluation/${evaluationId}/consensus`);
-  };
-
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={
-        selectMode ? 'Select Consensus' : 'Open Consensus details'
-      }
-      accessibilityState={selectMode ? { selected } : undefined}
-      style={({ pressed: p }) => [
-        styles.row,
-        styles.consensusRow,
-        selectMode && selected && styles.rowSelected,
-        p && pressed.default,
-      ]}>
-      {selectMode ? (
-        <View
-          style={[
-            styles.checkbox,
-            selected && styles.checkboxSelected,
-          ]}>
-          {selected && <Text style={styles.checkboxMark}>✓</Text>}
-        </View>
-      ) : (
-        <View style={styles.consensusBadge} />
-      )}
-      <View style={styles.rowMid}>
-        <Text style={styles.rowName}>Consensus</Text>
-        <Text style={styles.consensusSubtitle}>
-          From {voteCount} {voteCount === 1 ? 'vote' : 'votes'}
-        </Text>
-      </View>
-      {!selectMode && <Text style={styles.chevron}>›</Text>}
-    </Pressable>
+    <View style={styles.tabBar} accessibilityRole="tablist">
+      {(['yours', 'consensus'] as const).map((t) => {
+        const active = tab === t;
+        return (
+          <Pressable
+            key={t}
+            onPress={() => {
+              if (!active) {
+                Haptics.selectionAsync().catch(() => {});
+                onChange(t);
+              }
+            }}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={t === 'yours' ? 'Yours' : 'Consensus'}
+            style={({ pressed: p }) => [
+              styles.tabBtn,
+              active && styles.tabBtnActive,
+              p && !active && pressed.default,
+            ]}>
+            <Text
+              style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>
+              {t === 'yours' ? 'Yours' : 'Consensus'}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
-});
+}
 
 const makeStyles = (t: Theme) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: t.colors.bg },
@@ -910,22 +911,26 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     minHeight: 64,
   },
   rowExcluded: { opacity: 0.5 },
-  consensusRow: {
-    backgroundColor: 'transparent',
-    borderColor: t.colors.accent,
-    borderWidth: 1.5,
+  tabBar: {
+    flexDirection: 'row',
+    marginTop: spacing.md,
+    padding: 4,
+    borderRadius: radii.pill,
+    backgroundColor: t.colors.bgElev,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: t.colors.border,
+    gap: 4,
   },
-  consensusBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.md,
-    backgroundColor: t.colors.accent,
+  tabBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  consensusSubtitle: {
-    ...type.eyebrow,
-    color: t.colors.accent,
-    textTransform: 'uppercase',
-  },
+  tabBtnActive: { backgroundColor: t.colors.accent },
+  tabBtnText: { ...type.label, color: t.colors.textDim },
+  tabBtnTextActive: { color: t.colors.onAccent },
   colorChip: {
     width: 40,
     height: 40,

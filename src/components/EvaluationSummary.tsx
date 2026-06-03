@@ -2,11 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
-import type {
-  EvaluationCategory,
-  Participant,
-  Score,
-} from '@/db/hooks';
+import type { EvaluationCategory, Participant } from '@/db/hooks';
 import { useThemedStyles, type Theme } from '@/design/theme';
 import { radii, spacing, type } from '@/design/tokens';
 import {
@@ -17,11 +13,20 @@ import {
   weakestCategoryByMean,
 } from '@/lib/stats';
 
+// Duck-typed score input — accepts both DB Score and the synthetic
+// FlatScore rows produced from consensus data.
+type ScoreLike = {
+  participantId: string;
+  categoryKey: string;
+  value: number;
+};
+
 type Props = {
   evaluationId: string;
   participants: readonly Participant[];
   categories: readonly EvaluationCategory[];
-  scores: readonly Score[];
+  scores: readonly ScoreLike[];
+  mode?: 'yours' | 'consensus';
 };
 
 export function EvaluationSummary({
@@ -29,6 +34,7 @@ export function EvaluationSummary({
   participants,
   categories,
   scores,
+  mode = 'yours',
 }: Props) {
   const styles = useThemedStyles(makeStyles);
   const active = participants.filter((p) => !p.excluded);
@@ -62,7 +68,11 @@ export function EvaluationSummary({
       <View style={styles.headerRow}>
         <Text style={styles.eyebrow}>Summary</Text>
         <Pressable
-          onPress={() => router.push(`/evaluation/${evaluationId}/insights`)}
+          onPress={() =>
+            router.push(
+              `/evaluation/${evaluationId}/insights?mode=${mode}`,
+            )
+          }
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="View insights"

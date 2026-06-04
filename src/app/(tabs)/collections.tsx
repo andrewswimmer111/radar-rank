@@ -116,12 +116,14 @@ function CollectionRow({
     <Animated.View entering={FadeInDown.duration(360).delay(60 + index * 30)}>
       <Pressable
         onPress={() => router.push(`/collection/${collection.id}`)}
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${collection.name}`}
         style={({ pressed: p }) => [styles.row, p && pressed.default]}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.rowName} numberOfLines={1}>
+        <View style={styles.rowBody}>
+          <Text style={styles.rowTitle} numberOfLines={2}>
             {collection.name}
           </Text>
-          <Text style={styles.rowMeta}>
+          <Text style={styles.rowSubtitle} numberOfLines={1}>
             {collection.peopleCount}{' '}
             {collection.peopleCount === 1 ? 'person' : 'people'}
           </Text>
@@ -148,13 +150,16 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: t.colors.border,
+    gap: spacing.md,
+    minHeight: 72,
   },
-  rowName: { ...type.h2, color: t.colors.text },
-  rowMeta: { ...type.body, color: t.colors.textDim, marginTop: 2 },
-  chevron: { ...type.h2, color: t.colors.textMute, marginLeft: spacing.md },
+  rowBody: { flex: 1, gap: 2 },
+  rowTitle: { ...type.h3, color: t.colors.text },
+  rowSubtitle: { ...type.caption, color: t.colors.textDim },
+  chevron: { ...type.h2, color: t.colors.textMute },
   ctaBlock: {
     backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,

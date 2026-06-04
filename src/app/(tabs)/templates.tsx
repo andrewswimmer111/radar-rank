@@ -104,21 +104,24 @@ function TemplateCard({ template, index }: { template: Template; index: number }
     <Animated.View entering={FadeInDown.duration(360).delay(60 + index * 40)}>
       <Pressable
         onPress={() => router.push(`/template/${template.id}`)}
-        style={({ pressed: p }) => [p && pressed.default]}>
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${template.name}`}
+        style={({ pressed: p }) => [styles.row, p && pressed.default]}>
         <LinearGradient
           colors={[template.accent.start, template.accent.end]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.card}>
-          <View style={styles.cardBody}>
-            <Text style={styles.cardName} numberOfLines={1}>
-              {template.name}
-            </Text>
-            <Text style={styles.cardBlurb} numberOfLines={2}>
-              {template.blurb}
-            </Text>
-          </View>
-        </LinearGradient>
+          style={styles.swatch}
+        />
+        <View style={styles.rowBody}>
+          <Text style={styles.rowTitle} numberOfLines={1}>
+            {template.name}
+          </Text>
+          <Text style={styles.rowSubtitle} numberOfLines={2}>
+            {template.blurb}
+          </Text>
+        </View>
+        <Text style={styles.chevron}>›</Text>
       </Pressable>
     </Animated.View>
   );
@@ -134,18 +137,28 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   },
   sectionCaption: { ...type.caption, color: t.colors.textMute },
   sectionBody: { gap: spacing.md },
-  card: {
-    borderRadius: radii.xl,
-    padding: spacing.lg,
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: t.colors.bgElev,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: t.colors.border,
     gap: spacing.md,
-    minHeight: 96,
+    minHeight: 72,
+  },
+  swatch: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
     overflow: 'hidden',
   },
-  cardBody: { flex: 1, gap: 2 },
-  cardName: { ...type.h2, color: '#fff' },
-  cardBlurb: { ...type.body, color: 'rgba(255,255,255,0.86)' },
+  rowBody: { flex: 1, gap: 2 },
+  rowTitle: { ...type.h3, color: t.colors.text },
+  rowSubtitle: { ...type.caption, color: t.colors.textDim },
+  chevron: { ...type.h2, color: t.colors.textMute },
   ctaBlock: {
     backgroundColor: t.colors.bgElev,
     borderRadius: radii.lg,

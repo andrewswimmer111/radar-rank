@@ -404,30 +404,17 @@ export default function EvaluationDetail() {
               <Text style={styles.headerPillText}>Cancel</Text>
             </Pressable>
           ) : (
-            <>
-              {participantList.length >= 2 && (
-                <Pressable
-                  onPress={enterSelectMode}
-                  hitSlop={10}
-                  style={({ pressed: p }) => [
-                    styles.headerPill,
-                    p && pressed.default,
-                  ]}>
-                  <Text style={styles.headerPillText}>Compare</Text>
-                </Pressable>
-              )}
-              <Pressable
-                onPress={onOpenMenu}
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel="More options"
-                style={({ pressed: p }) => [
-                  styles.menuBtn,
-                  p && pressed.default,
-                ]}>
-                <Text style={styles.menuBtnText}>⋯</Text>
-              </Pressable>
-            </>
+            <Pressable
+              onPress={onOpenMenu}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="More options"
+              style={({ pressed: p }) => [
+                styles.menuBtn,
+                p && pressed.default,
+              ]}>
+              <Text style={styles.menuBtnText}>⋯</Text>
+            </Pressable>
           )
         }
       />
@@ -464,25 +451,12 @@ export default function EvaluationDetail() {
             <Text style={styles.lineage}>From {lineage}</Text>
           )}
 
-          {isShared && !selectMode && (
-            <Pressable
-              onPress={onOpenMenu}
-              hitSlop={6}
-              style={({ pressed: p }) => [
-                styles.shareStatusRow,
-                p && pressed.default,
-              ]}>
-              <View style={styles.shareStatusDot} />
-              <Text style={styles.shareStatusText}>
-                Shared · {voteCount ?? 0}{' '}
-                {voteCount === 1 ? 'vote' : 'votes'}
-              </Text>
-              <Text style={styles.shareStatusChevron}>›</Text>
-            </Pressable>
-          )}
-
           {hasVotes && !selectMode && (
-            <TabSwitch tab={tab} onChange={setTab} />
+            <TabSwitch
+              tab={tab}
+              onChange={setTab}
+              voteCount={voteCount ?? 0}
+            />
           )}
 
           {!selectMode && (
@@ -509,11 +483,24 @@ export default function EvaluationDetail() {
           </View>
 
           {!selectMode && participantList.length >= 2 && (
-            <SortMenu
-              mode={sortMode}
-              categories={categories ?? []}
-              onChange={setSortMode}
-            />
+            <View style={styles.actionRow}>
+              <SortMenu
+                mode={sortMode}
+                categories={categories ?? []}
+                onChange={setSortMode}
+              />
+              <Pressable
+                onPress={enterSelectMode}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel="Compare participants"
+                style={({ pressed: p }) => [
+                  styles.actionChip,
+                  p && pressed.soft,
+                ]}>
+                <Text style={styles.actionChipText}>Compare</Text>
+              </Pressable>
+            </View>
           )}
 
           <View style={styles.list}>
@@ -721,11 +708,15 @@ const ParticipantRow = memo(function ParticipantRow({
 function TabSwitch({
   tab,
   onChange,
+  voteCount,
 }: {
   tab: 'yours' | 'consensus';
   onChange: (next: 'yours' | 'consensus') => void;
+  voteCount: number;
 }) {
   const styles = useThemedStyles(makeStyles);
+  const labelFor = (t: 'yours' | 'consensus') =>
+    t === 'yours' ? 'Yours' : `Consensus · ${voteCount}`;
   return (
     <View style={styles.tabBar} accessibilityRole="tablist">
       {(['yours', 'consensus'] as const).map((t) => {
@@ -741,7 +732,7 @@ function TabSwitch({
             }}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            accessibilityLabel={t === 'yours' ? 'Yours' : 'Consensus'}
+            accessibilityLabel={labelFor(t)}
             style={({ pressed: p }) => [
               styles.tabBtn,
               active && styles.tabBtnActive,
@@ -749,7 +740,7 @@ function TabSwitch({
             ]}>
             <Text
               style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>
-              {t === 'yours' ? 'Yours' : 'Consensus'}
+              {labelFor(t)}
             </Text>
           </Pressable>
         );
@@ -850,33 +841,6 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     marginTop: spacing.sm,
     paddingHorizontal: spacing.sm,
   },
-  shareStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.lg,
-    backgroundColor: t.colors.bgElev,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: t.colors.accent,
-    gap: spacing.sm,
-  },
-  shareStatusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: t.colors.accent,
-  },
-  shareStatusText: {
-    ...type.label,
-    color: t.colors.text,
-    flex: 1,
-  },
-  shareStatusChevron: {
-    ...type.h3,
-    color: t.colors.textMute,
-  },
   participantsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -884,6 +848,22 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     marginTop: spacing.xl,
   },
   participantsCount: { ...type.caption, color: t.colors.textMute },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  actionChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    backgroundColor: t.colors.bgElev,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: t.colors.border,
+  },
+  actionChipText: { ...type.label, color: t.colors.text },
   list: { marginTop: spacing.sm, gap: spacing.sm },
   listEmpty: {
     backgroundColor: t.colors.bgElev,

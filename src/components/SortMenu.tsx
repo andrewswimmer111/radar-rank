@@ -101,14 +101,17 @@ function openCategorySheet(opts: {
 }
 
 const makeStyles = (t: Theme) => StyleSheet.create({
-  row: { flexDirection: 'row', justifyContent: 'flex-end' },
+  row: { flexDirection: 'row' },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
     borderRadius: radii.pill,
+    backgroundColor: t.colors.bgElev,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: t.colors.border,
   },
   chipLabel: { ...type.caption, color: t.colors.textMute },
   chipValue: { ...type.label, color: t.colors.text },

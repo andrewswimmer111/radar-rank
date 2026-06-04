@@ -28,6 +28,7 @@ import {
   type RestoreMode,
 } from '@/lib/backup';
 import { confirmDestructive } from '@/lib/dialog';
+import { useStarterPrefs } from '@/lib/starterPrefs';
 
 const msg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -36,6 +37,14 @@ export default function SettingsScreen() {
   const { name: themeName, setTheme } = useThemeController();
   const styles = useThemedStyles(makeStyles);
   const [busy, setBusy] = useState<'export' | 'import' | null>(null);
+  const {
+    hidden: hiddenStarters,
+    hiddenTabs,
+    restoreHiddenItems,
+    restoreHiddenTabs,
+  } = useStarterPrefs();
+  const hiddenItemCount = hiddenStarters.size;
+  const hiddenTabCount = hiddenTabs.size;
 
   const version = Constants.expoConfig?.version ?? '—';
   const build = Constants.expoConfig?.ios?.buildNumber ?? null;
@@ -153,6 +162,33 @@ export default function SettingsScreen() {
             busy={busy === 'import'}
           />
         </View>
+
+        {(hiddenItemCount > 0 || hiddenTabCount > 0) && (
+          <>
+            <Text style={styles.sectionLabel}>Starters</Text>
+            <View style={styles.card}>
+              {hiddenItemCount > 0 && (
+                <ActionRow
+                  title="Restore hidden starters"
+                  subtitle={`${hiddenItemCount} hidden`}
+                  onPress={restoreHiddenItems}
+                  busy={false}
+                />
+              )}
+              {hiddenItemCount > 0 && hiddenTabCount > 0 && (
+                <View style={styles.divider} />
+              )}
+              {hiddenTabCount > 0 && (
+                <ActionRow
+                  title="Show starter sections"
+                  subtitle={`${hiddenTabCount} section${hiddenTabCount === 1 ? '' : 's'} hidden`}
+                  onPress={restoreHiddenTabs}
+                  busy={false}
+                />
+              )}
+            </View>
+          </>
+        )}
 
         <Text style={styles.sectionLabel}>About</Text>
         <View style={styles.card}>

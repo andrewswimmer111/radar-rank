@@ -2,21 +2,44 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { SwipeRow } from '@/components/SwipeRow';
 import {
+  Section,
   TabContent,
   TabErrorBox,
   TabHeader,
   TabLoading,
   TabScreen,
 } from '@/components/TabScreen';
-import { useCollections, type CollectionWithCount } from '@/db/hooks';
+import {
+  deleteCollection,
+  useCollections,
+  type CollectionWithCount,
+} from '@/db/hooks';
 import { useThemedStyles, type Theme } from '@/design/theme';
 import { pressed, radii, spacing, type } from '@/design/tokens';
+import { confirmDestructive } from '@/lib/dialog';
+import { useStarterPrefs } from '@/lib/starterPrefs';
 
 const isStarter = (id: string) => id.startsWith('builtin-');
 
+const confirmDeleteCollection = (id: string, name: string) =>
+  confirmDestructive({
+    title: `Delete ${name}?`,
+    message:
+      'All people will be removed. Existing evaluations keep their participant snapshots.',
+    confirmLabel: 'Delete',
+    onConfirm: () => deleteCollection(id),
+  });
+
+const sortPinnedFirst =
+  (pinned: ReadonlySet<string>) =>
+  (a: { id: string }, b: { id: string }) =>
+    Number(pinned.has(b.id)) - Number(pinned.has(a.id));
+
 export default function CollectionsTab() {
   const { data, loading, error } = useCollections();
+  const { hidden, pinned, hiddenTabs, hide, hideTab } = useStarterPrefs();
 
   if (loading && !data) {
     return (
@@ -35,8 +58,13 @@ export default function CollectionsTab() {
   }
 
   const all = data ?? [];
-  const starters = all.filter((c) => isStarter(c.id));
-  const yours = all.filter((c) => !isStarter(c.id));
+  const yours = all
+    .filter((c) => !isStarter(c.id))
+    .sort(sortPinnedFirst(pinned));
+  const starters = all
+    .filter((c) => isStarter(c.id) && !hidden.has(c.id))
+    .sort(sortPinnedFirst(pinned));
+  const showStarters = !hiddenTabs.has('collections') && starters.length > 0;
 
   return (
     <TabScreen>
@@ -45,47 +73,36 @@ export default function CollectionsTab() {
         <Section title="Yours" caption="Collections you've built.">
           <NewCollectionCta />
           {yours.map((c, i) => (
-            <CollectionRow key={c.id} collection={c} index={i} />
+            <SwipeRow
+              key={c.id}
+              id={c.id}
+              onDelete={() => confirmDeleteCollection(c.id, c.name)}>
+              <CollectionRow collection={c} index={i} />
+            </SwipeRow>
           ))}
         </Section>
 
-        {starters.length > 0 && (
+        {showStarters && (
           <Section
             title="Starters"
             caption="A sample crew to get you moving."
+            onHide={() => hideTab('collections')}
           >
             {starters.map((c, i) => (
-              <CollectionRow
+              <SwipeRow
                 key={c.id}
-                collection={c}
-                index={yours.length + i}
-              />
+                id={c.id}
+                onDelete={() => hide(c.id)}>
+                <CollectionRow
+                  collection={c}
+                  index={yours.length + i}
+                />
+              </SwipeRow>
             ))}
           </Section>
         )}
       </TabContent>
     </TabScreen>
-  );
-}
-
-function Section({
-  title,
-  caption,
-  children,
-}: {
-  title: string;
-  caption: string;
-  children: React.ReactNode;
-}) {
-  const styles = useThemedStyles(makeStyles);
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.sectionCaption}>{caption}</Text>
-      </View>
-      <View style={styles.sectionBody}>{children}</View>
-    </View>
   );
 }
 
@@ -112,6 +129,8 @@ function CollectionRow({
   index: number;
 }) {
   const styles = useThemedStyles(makeStyles);
+  const { pinned } = useStarterPrefs();
+  const isPinned = pinned.has(collection.id);
   return (
     <Animated.View entering={FadeInDown.duration(360).delay(60 + index * 30)}>
       <Pressable
@@ -128,6 +147,7 @@ function CollectionRow({
             {collection.peopleCount === 1 ? 'person' : 'people'}
           </Text>
         </View>
+        {isPinned && <View style={styles.pinDot} />}
         <Text style={styles.chevron}>›</Text>
       </Pressable>
     </Animated.View>
@@ -135,15 +155,6 @@ function CollectionRow({
 }
 
 const makeStyles = (t: Theme) => StyleSheet.create({
-  section: { gap: spacing.md },
-  sectionHeader: { gap: 4 },
-  sectionTitle: {
-    ...type.eyebrow,
-    color: t.colors.accent,
-    textTransform: 'uppercase',
-  },
-  sectionCaption: { ...type.caption, color: t.colors.textMute },
-  sectionBody: { gap: spacing.md },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -159,6 +170,12 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   rowBody: { flex: 1, gap: 2 },
   rowTitle: { ...type.h3, color: t.colors.text },
   rowSubtitle: { ...type.caption, color: t.colors.textDim },
+  pinDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: t.colors.accent,
+  },
   chevron: { ...type.h2, color: t.colors.textMute },
   ctaBlock: {
     backgroundColor: t.colors.bgElev,

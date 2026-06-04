@@ -3,19 +3,38 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { SwipeRow } from '@/components/SwipeRow';
 import {
+  Section,
   TabContent,
   TabErrorBox,
   TabHeader,
   TabLoading,
   TabScreen,
 } from '@/components/TabScreen';
-import { useTemplates, type Template } from '@/db/hooks';
+import { deleteTemplate, useTemplates, type Template } from '@/db/hooks';
 import { useThemedStyles, type Theme } from '@/design/theme';
 import { pressed, radii, spacing, type } from '@/design/tokens';
+import { confirmDestructive } from '@/lib/dialog';
+import { useStarterPrefs } from '@/lib/starterPrefs';
+
+const confirmDeleteTemplate = (id: string, name: string) =>
+  confirmDestructive({
+    title: `Delete ${name}?`,
+    message:
+      'Existing evaluations created from it keep their snapshotted categories.',
+    confirmLabel: 'Delete',
+    onConfirm: () => deleteTemplate(id),
+  });
+
+const sortPinnedFirst =
+  (pinned: ReadonlySet<string>) =>
+  (a: { id: string }, b: { id: string }) =>
+    Number(pinned.has(b.id)) - Number(pinned.has(a.id));
 
 export default function TemplatesTab() {
   const { data, loading, error } = useTemplates();
+  const { hidden, pinned, hiddenTabs, hide, hideTab } = useStarterPrefs();
 
   if (loading && !data) {
     return (
@@ -34,8 +53,13 @@ export default function TemplatesTab() {
   }
 
   const all = data ?? [];
-  const builtins = all.filter((t) => t.isBuiltin);
-  const customs = all.filter((t) => !t.isBuiltin);
+  const customs = all
+    .filter((t) => !t.isBuiltin)
+    .sort(sortPinnedFirst(pinned));
+  const builtins = all
+    .filter((t) => t.isBuiltin && !hidden.has(t.id))
+    .sort(sortPinnedFirst(pinned));
+  const showStarters = !hiddenTabs.has('templates') && builtins.length > 0;
 
   return (
     <TabScreen>
@@ -44,42 +68,35 @@ export default function TemplatesTab() {
         <Section title="Yours" caption="Templates you've duplicated or built.">
           <NewTemplateCta />
           {customs.map((t, i) => (
-            <TemplateCard key={t.id} template={t} index={i} />
+            <SwipeRow
+              key={t.id}
+              id={t.id}
+              onDelete={() => confirmDeleteTemplate(t.id, t.name)}>
+              <TemplateCard template={t} index={i} />
+            </SwipeRow>
           ))}
         </Section>
 
-        <Section title="Starters" caption="Curated rubrics to start from.">
-          {builtins.map((t, i) => (
-            <TemplateCard
-              key={t.id}
-              template={t}
-              index={customs.length + i}
-            />
-          ))}
-        </Section>
+        {showStarters && (
+          <Section
+            title="Starters"
+            caption="Curated rubrics to start from."
+            onHide={() => hideTab('templates')}>
+            {builtins.map((t, i) => (
+              <SwipeRow
+                key={t.id}
+                id={t.id}
+                onDelete={() => hide(t.id)}>
+                <TemplateCard
+                  template={t}
+                  index={customs.length + i}
+                />
+              </SwipeRow>
+            ))}
+          </Section>
+        )}
       </TabContent>
     </TabScreen>
-  );
-}
-
-function Section({
-  title,
-  caption,
-  children,
-}: {
-  title: string;
-  caption: string;
-  children: React.ReactNode;
-}) {
-  const styles = useThemedStyles(makeStyles);
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.sectionCaption}>{caption}</Text>
-      </View>
-      <View style={styles.sectionBody}>{children}</View>
-    </View>
   );
 }
 
@@ -100,6 +117,8 @@ function NewTemplateCta() {
 
 function TemplateCard({ template, index }: { template: Template; index: number }) {
   const styles = useThemedStyles(makeStyles);
+  const { pinned } = useStarterPrefs();
+  const isPinned = pinned.has(template.id);
   return (
     <Animated.View entering={FadeInDown.duration(360).delay(60 + index * 40)}>
       <Pressable
@@ -121,6 +140,7 @@ function TemplateCard({ template, index }: { template: Template; index: number }
             {template.blurb}
           </Text>
         </View>
+        {isPinned && <View style={styles.pinDot} />}
         <Text style={styles.chevron}>›</Text>
       </Pressable>
     </Animated.View>
@@ -128,15 +148,6 @@ function TemplateCard({ template, index }: { template: Template; index: number }
 }
 
 const makeStyles = (t: Theme) => StyleSheet.create({
-  section: { gap: spacing.md },
-  sectionHeader: { gap: 4 },
-  sectionTitle: {
-    ...type.eyebrow,
-    color: t.colors.accent,
-    textTransform: 'uppercase',
-  },
-  sectionCaption: { ...type.caption, color: t.colors.textMute },
-  sectionBody: { gap: spacing.md },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -158,6 +169,12 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   rowBody: { flex: 1, gap: 2 },
   rowTitle: { ...type.h3, color: t.colors.text },
   rowSubtitle: { ...type.caption, color: t.colors.textDim },
+  pinDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: t.colors.accent,
+  },
   chevron: { ...type.h2, color: t.colors.textMute },
   ctaBlock: {
     backgroundColor: t.colors.bgElev,

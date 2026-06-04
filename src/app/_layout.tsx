@@ -18,6 +18,7 @@ import {
 } from '@/design/theme';
 import { colors } from '@/design/tokens';
 import { useAppFonts } from '@/design/useAppFonts';
+import { StarterPrefsProvider } from '@/lib/starterPrefs';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -113,7 +114,9 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider initialName={themeName}>
-      <ThemedRoot />
+      <StarterPrefsProvider>
+        <ThemedRoot />
+      </StarterPrefsProvider>
     </ThemeProvider>
   );
 }

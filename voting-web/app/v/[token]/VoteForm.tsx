@@ -1,11 +1,17 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { withVoteToken } from '@/lib/supabase';
 
 import { ErrorState } from './ErrorState';
 import styles from './styles.module.css';
+
+// How often to recheck the cloud row for a fresh frozen_at while a
+// voter has the form open. 15s is a comfortable trade-off — quick
+// enough that a freeze rarely lets a voter fill in much before they
+// notice, slow enough to not look like polling spam in network logs.
+const FROZEN_POLL_MS = 15_000;
 
 type SharedEvaluation = {
   id: string;
@@ -67,6 +73,39 @@ export function VoteForm({
   // whole form swaps to the frozen state, matching what a fresh page load
   // against a frozen link would render.
   const [frozen, setFrozen] = useState(false);
+
+  // Poll for a freeze that happens while this voter has the form open.
+  // The SSR check in page.tsx already covers visit-time, so this only
+  // matters for the "filled out the form, creator paused mid-way" path.
+  // Skips polling once frozen / submitted to avoid burning requests on
+  // a page that's about to swap states.
+  useEffect(() => {
+    if (frozen || submitted) return;
+    let cancelled = false;
+    const sb = withVoteToken(voteToken);
+    const check = async () => {
+      const { data } = await sb
+        .from('shared_evaluations')
+        .select('frozen_at')
+        .eq('id', evaluation.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (data?.frozen_at) setFrozen(true);
+    };
+    const interval = setInterval(check, FROZEN_POLL_MS);
+    // Re-check immediately when the tab regains focus — a voter who
+    // came back after an hour shouldn't have to wait a full poll
+    // cycle to learn the link is paused.
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') void check();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [voteToken, evaluation.id, frozen, submitted]);
 
   const gradient = useMemo(
     () =>

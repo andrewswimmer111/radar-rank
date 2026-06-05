@@ -9,15 +9,16 @@ import { useStarterPrefs } from '@/lib/starterPrefs';
 
 // Wraps a list row so a left swipe reveals Delete and a right swipe
 // reveals Pin/Unpin — Outlook-style: swipe to expose, tap to commit. Pin
-// persists via shared prefs; delete is delegated to the caller so each tab
-// can decide between a silent starter-hide and a real destructive DB delete.
+// persists via shared prefs; delete is delegated to the caller. Omit
+// onDelete to render a pin-only row (used for starters, which can't be
+// deleted).
 export function SwipeRow({
   id,
   onDelete,
   children,
 }: {
   id: string;
-  onDelete: () => void;
+  onDelete?: () => void;
   children: ReactNode;
 }) {
   const styles = useThemedStyles(makeStyles);
@@ -32,6 +33,7 @@ export function SwipeRow({
   };
 
   const onDeletePress = () => {
+    if (!onDelete) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
       () => {},
     );
@@ -46,7 +48,7 @@ export function SwipeRow({
       overshootLeft={false}
       overshootRight={false}
       leftThreshold={48}
-      rightThreshold={48}
+      rightThreshold={onDelete ? 48 : 9999}
       renderLeftActions={() => (
         <View style={styles.leftWrap}>
           <Pressable
@@ -58,17 +60,24 @@ export function SwipeRow({
           </Pressable>
         </View>
       )}
-      renderRightActions={() => (
-        <View style={styles.rightWrap}>
-          <Pressable
-            onPress={onDeletePress}
-            accessibilityRole="button"
-            accessibilityLabel="Delete"
-            style={({ pressed: p }) => [styles.deletePanel, p && pressed.soft]}>
-            <Text style={styles.deleteText}>Delete</Text>
-          </Pressable>
-        </View>
-      )}>
+      renderRightActions={
+        onDelete
+          ? () => (
+              <View style={styles.rightWrap}>
+                <Pressable
+                  onPress={onDeletePress}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete"
+                  style={({ pressed: p }) => [
+                    styles.deletePanel,
+                    p && pressed.soft,
+                  ]}>
+                  <Text style={styles.deleteText}>Delete</Text>
+                </Pressable>
+              </View>
+            )
+          : undefined
+      }>
       {children}
     </Swipeable>
   );

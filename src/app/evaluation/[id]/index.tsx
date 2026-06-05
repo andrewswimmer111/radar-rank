@@ -78,6 +78,7 @@ export default function EvaluationDetail() {
   const isShared = !!share;
   const isFrozen = !!share?.frozenAt;
   const isActive = isShared && !isFrozen;
+  const isStarter = id.startsWith('builtin-');
   const hasVotes = (voteCount ?? 0) > 0;
   // Tabs only appear once there's something to switch to. Default to
   // "yours" so the screen reads identically pre-share.
@@ -387,19 +388,22 @@ export default function EvaluationDetail() {
       actions = [
         { label: 'Copy link', onPress: () => void onCopyLink() },
         { label: 'Resume voting', onPress: () => void onResumeSharing() },
-        deleteAction,
       ];
     } else if (isShared) {
       actions = [
         { label: 'Copy link', onPress: () => void onCopyLink() },
         { label: 'Pause voting', onPress: onPauseSharing },
-        deleteAction,
       ];
     } else {
-      actions = [
-        { label: 'Share evaluation', onPress: onShare },
-        deleteAction,
-      ];
+      actions = [{ label: 'Share evaluation', onPress: onShare }];
+    }
+    // Starters are read-only: they never expose pause/delete. Filter both
+    // out after building the list above so the share/frozen branches stay
+    // straightforward to read.
+    if (isStarter) {
+      actions = actions.filter((a) => a.label !== 'Pause voting');
+    } else {
+      actions.push(deleteAction);
     }
     showActionSheet({
       // Title only shows on Android (iOS sheet here intentionally has no

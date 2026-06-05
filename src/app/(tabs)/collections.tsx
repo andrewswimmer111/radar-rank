@@ -39,7 +39,7 @@ const sortPinnedFirst =
 
 export default function CollectionsTab() {
   const { data, loading, error } = useCollections();
-  const { hidden, pinned, hiddenTabs, hide, hideTab } = useStarterPrefs();
+  const { hidden, pinned, hiddenTabs, hideTab } = useStarterPrefs();
 
   if (loading && !data) {
     return (
@@ -89,10 +89,7 @@ export default function CollectionsTab() {
             onHide={() => hideTab('collections')}
           >
             {starters.map((c, i) => (
-              <SwipeRow
-                key={c.id}
-                id={c.id}
-                onDelete={() => hide(c.id)}>
+              <SwipeRow key={c.id} id={c.id}>
                 <CollectionRow
                   collection={c}
                   index={yours.length + i}

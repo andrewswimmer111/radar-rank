@@ -40,7 +40,7 @@ const sortPinnedFirst =
 
 export default function EvaluationsTab() {
   const { data } = useEvaluations();
-  const { hidden, pinned, hiddenTabs, hide, hideTab } = useStarterPrefs();
+  const { hidden, pinned, hiddenTabs, hideTab } = useStarterPrefs();
   const all = data ?? [];
   const yours = all
     .filter((e) => !isStarter(e.id))
@@ -73,10 +73,7 @@ export default function EvaluationsTab() {
             onHide={() => hideTab('evaluations')}
           >
             {starters.map((e, i) => (
-              <SwipeRow
-                key={e.id}
-                id={e.id}
-                onDelete={() => hide(e.id)}>
+              <SwipeRow key={e.id} id={e.id}>
                 <EvaluationRow
                   evaluation={e}
                   index={yours.length + i}

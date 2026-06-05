@@ -34,7 +34,7 @@ const sortPinnedFirst =
 
 export default function TemplatesTab() {
   const { data, loading, error } = useTemplates();
-  const { hidden, pinned, hiddenTabs, hide, hideTab } = useStarterPrefs();
+  const { hidden, pinned, hiddenTabs, hideTab } = useStarterPrefs();
 
   if (loading && !data) {
     return (
@@ -83,10 +83,7 @@ export default function TemplatesTab() {
             caption="Curated rubrics to start from."
             onHide={() => hideTab('templates')}>
             {builtins.map((t, i) => (
-              <SwipeRow
-                key={t.id}
-                id={t.id}
-                onDelete={() => hide(t.id)}>
+              <SwipeRow key={t.id} id={t.id}>
                 <TemplateCard
                   template={t}
                   index={customs.length + i}

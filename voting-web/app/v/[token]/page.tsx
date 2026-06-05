@@ -9,6 +9,7 @@ type SharedEvaluation = {
   accent_start: string;
   accent_end: string;
   accent_glow: string;
+  frozen_at: string | null;
 };
 
 type SharedParticipant = {
@@ -37,11 +38,15 @@ export default async function VotePage({
 
   const { data: evaluation } = await sb
     .from('shared_evaluations')
-    .select('id, title, accent_start, accent_end, accent_glow')
+    .select('id, title, accent_start, accent_end, accent_glow, frozen_at')
     .maybeSingle<SharedEvaluation>();
 
   if (!evaluation) {
     return <ErrorState />;
+  }
+
+  if (evaluation.frozen_at) {
+    return <ErrorState variant="frozen" />;
   }
 
   const [participantsRes, categoriesRes] = await Promise.all([

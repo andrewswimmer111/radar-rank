@@ -9,6 +9,7 @@ export type EvaluationShare = {
   ownerInstallId: string;
   sharedAt: number;
   lastPulledAt: number | null;
+  frozenAt: number | null;
 };
 
 type Row = {
@@ -19,6 +20,7 @@ type Row = {
   owner_install_id: string;
   shared_at: number;
   last_pulled_at: number | null;
+  frozen_at: number | null;
 };
 
 function fromRow(r: Row): EvaluationShare {
@@ -30,6 +32,7 @@ function fromRow(r: Row): EvaluationShare {
     ownerInstallId: r.owner_install_id,
     sharedAt: r.shared_at,
     lastPulledAt: r.last_pulled_at,
+    frozenAt: r.frozen_at,
   };
 }
 
@@ -44,8 +47,8 @@ export async function createShare(input: {
   const ts = now();
   await db.runAsync(
     `INSERT INTO evaluation_shares
-       (evaluation_id, cloud_id, view_token, vote_token, owner_install_id, shared_at, last_pulled_at)
-     VALUES (?, ?, ?, ?, ?, ?, NULL)`,
+       (evaluation_id, cloud_id, view_token, vote_token, owner_install_id, shared_at, last_pulled_at, frozen_at)
+     VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)`,
     [
       input.evaluationId,
       input.cloudId,
@@ -55,7 +58,7 @@ export async function createShare(input: {
       ts,
     ],
   );
-  return { ...input, sharedAt: ts, lastPulledAt: null };
+  return { ...input, sharedAt: ts, lastPulledAt: null, frozenAt: null };
 }
 
 export async function getShareForEvaluation(
@@ -82,5 +85,18 @@ export async function touchSharePulledAt(evaluationId: string): Promise<void> {
   await db.runAsync(
     'UPDATE evaluation_shares SET last_pulled_at = ? WHERE evaluation_id = ?',
     [now(), evaluationId],
+  );
+}
+
+// Pass a timestamp to freeze, or null to resume. The share row itself
+// stays put either way — votes and submissions remain in the cache.
+export async function setShareFrozenAt(
+  evaluationId: string,
+  frozenAt: number | null,
+): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'UPDATE evaluation_shares SET frozen_at = ? WHERE evaluation_id = ?',
+    [frozenAt, evaluationId],
   );
 }

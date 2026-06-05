@@ -371,7 +371,7 @@ export async function deleteEvaluation(id: string) {
   // an orphaned cloud row stays RLS-protected and the user's local state
   // still gets cleaned up.
   try {
-    await cloudPush.unshareEvaluation(id);
+    await cloudPush.purgeShare(id);
   } catch {
     // swallow
   }
@@ -453,13 +453,18 @@ export async function shareEvaluation(evaluationId: string) {
   return share;
 }
 
-export async function unshareEvaluation(evaluationId: string) {
-  await cloudPush.unshareEvaluation(evaluationId);
-  publish(
-    T.share(evaluationId),
-    T.voteSubmissions(evaluationId),
-    T.evaluations,
-  );
+// Pause voting: the link starts rejecting submissions, but the share
+// row and cached votes survive so the consensus tab keeps showing what
+// it had at freeze time. No voteSubmissions invalidation — that cache
+// is unchanged.
+export async function freezeEvaluation(evaluationId: string) {
+  await cloudPush.freezeEvaluation(evaluationId);
+  publish(T.share(evaluationId), T.evaluations);
+}
+
+export async function resumeEvaluation(evaluationId: string) {
+  await cloudPush.resumeEvaluation(evaluationId);
+  publish(T.share(evaluationId), T.evaluations);
 }
 
 export async function refreshSubmissions(evaluationId: string) {

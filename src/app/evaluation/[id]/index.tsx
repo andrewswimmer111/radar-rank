@@ -26,9 +26,10 @@ import {
   createParticipant,
   deleteEvaluation,
   deleteParticipant,
+  freezeEvaluation,
   refreshSubmissions,
+  resumeEvaluation,
   shareEvaluation,
-  unshareEvaluation,
   updateEvaluation,
   updateParticipant,
   useCollection,
@@ -75,23 +76,27 @@ export default function EvaluationDetail() {
   const { data: voteCount } = useSubmissionCount(id);
   const consensus = useConsensus(id);
   const isShared = !!share;
+  const isFrozen = !!share?.frozenAt;
+  const isActive = isShared && !isFrozen;
   const hasVotes = (voteCount ?? 0) > 0;
   // Tabs only appear once there's something to switch to. Default to
   // "yours" so the screen reads identically pre-share.
   const [tab, setTab] = useState<'yours' | 'consensus'>('yours');
-  // Fall back to "yours" when consensus data goes away (unshare, vote
-  // wipe) so we never leave the user looking at an empty consensus view.
+  // Fall back to "yours" when consensus data goes away (full delete)
+  // so we never leave the user looking at an empty consensus view.
+  // Freezing intentionally keeps the cached votes around, so a frozen
+  // share with hasVotes=true still lets the user stay on consensus.
   useEffect(() => {
     if (!hasVotes && tab === 'consensus') setTab('yours');
   }, [hasVotes, tab]);
 
   // Pull cached submissions on mount + whenever this evaluation's share
-  // identity changes (e.g. unshare → reshare rotates cloudId). Failures
-  // are non-fatal — the screen still works against whatever's cached.
+  // identity changes. Skip while frozen — no new submissions can arrive,
+  // and a re-pull is just wasted bandwidth. Failures are non-fatal.
   useEffect(() => {
-    if (!share) return;
+    if (!isActive) return;
     refreshSubmissions(id).catch(() => {});
-  }, [id, share?.cloudId]);
+  }, [id, share?.cloudId, isActive]);
   const { data: sourceCollection } = useCollection(
     evaluation?.originCollectionId ?? '',
   );
@@ -300,7 +305,7 @@ export default function EvaluationDetail() {
     }
     Alert.alert(
       'Share this evaluation?',
-      "You won't be able to add or remove participants until you unshare. Scores and excluded toggles still work.",
+      "You won't be able to add or remove participants until you delete the evaluation. Scores and excluded toggles still work.",
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -336,45 +341,66 @@ export default function EvaluationDetail() {
     );
   };
 
-  const onUnshare = () => {
-    confirmDestructive({
-      title: 'Unshare this evaluation?',
-      message:
-        'The share link will stop working and any submitted votes will be removed.',
-      confirmLabel: 'Unshare',
-      onConfirm: async () => {
-        try {
-          await unshareEvaluation(id);
-        } catch (err) {
-          Alert.alert(
-            'Could not unshare',
-            err instanceof Error ? err.message : String(err),
-          );
-        }
-      },
-    });
+  const onPauseSharing = () => {
+    Alert.alert(
+      'Pause voting?',
+      'The link will stop accepting new votes. Past votes stay in the Consensus tab. You can resume voting later from this menu.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Pause voting',
+          onPress: async () => {
+            try {
+              await freezeEvaluation(id);
+            } catch (err) {
+              Alert.alert(
+                'Could not pause voting',
+                err instanceof Error ? err.message : String(err),
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const onResumeSharing = async () => {
+    try {
+      await resumeEvaluation(id);
+    } catch (err) {
+      Alert.alert(
+        'Could not resume voting',
+        err instanceof Error ? err.message : String(err),
+      );
+    }
   };
 
   const onOpenMenu = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    const actions = isShared
-      ? [
-          { label: 'Copy link', onPress: () => void onCopyLink() },
-          { label: 'Unshare', destructive: true, onPress: onUnshare },
-          {
-            label: 'Delete evaluation',
-            destructive: true,
-            onPress: onDeleteEvaluation,
-          },
-        ]
-      : [
-          { label: 'Share evaluation', onPress: onShare },
-          {
-            label: 'Delete evaluation',
-            destructive: true,
-            onPress: onDeleteEvaluation,
-          },
-        ];
+    const deleteAction = {
+      label: 'Delete evaluation',
+      destructive: true,
+      onPress: onDeleteEvaluation,
+    };
+    let actions: { label: string; destructive?: boolean; onPress: () => void }[];
+    if (isFrozen) {
+      actions = [
+        { label: 'Copy link', onPress: () => void onCopyLink() },
+        { label: 'Resume voting', onPress: () => void onResumeSharing() },
+        deleteAction,
+      ];
+    } else if (isShared) {
+      actions = [
+        { label: 'Copy link', onPress: () => void onCopyLink() },
+        { label: 'Pause voting', onPress: onPauseSharing },
+        deleteAction,
+      ];
+    } else {
+      actions = [
+        { label: 'Share evaluation', onPress: onShare },
+        deleteAction,
+      ];
+    }
     showActionSheet({
       // Title only shows on Android (iOS sheet here intentionally has no
       // title to match the prior bare presentation).

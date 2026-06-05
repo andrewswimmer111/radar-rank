@@ -143,7 +143,20 @@ const v3: Migration = {
   },
 };
 
-const MIGRATIONS: Migration[] = [v1, v2, v3];
+// Mirrors the cloud-side frozen_at column added in the same release. A
+// "frozen" share keeps every local row (share + cached submissions +
+// scores) so the consensus tab survives an unshare; cloud-side the
+// row is preserved too so resuming reactivates the same vote link.
+const v4: Migration = {
+  version: 4,
+  up: async (db) => {
+    await db.execAsync(
+      'ALTER TABLE evaluation_shares ADD COLUMN frozen_at INTEGER',
+    );
+  },
+};
+
+const MIGRATIONS: Migration[] = [v1, v2, v3, v4];
 
 export async function runMigrations(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');

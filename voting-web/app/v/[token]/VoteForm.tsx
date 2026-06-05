@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 
 import { withVoteToken } from '@/lib/supabase';
 
+import { ErrorState } from './ErrorState';
 import styles from './styles.module.css';
 
 type SharedEvaluation = {
@@ -62,6 +63,10 @@ export function VoteForm({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Submission catches the cloud-side "frozen" rejection separately so the
+  // whole form swaps to the frozen state, matching what a fresh page load
+  // against a frozen link would render.
+  const [frozen, setFrozen] = useState(false);
 
   const gradient = useMemo(
     () =>
@@ -111,14 +116,25 @@ export function VoteForm({
       if (error) throw error;
       setSubmitted(true);
     } catch (err) {
-      setSubmitError(
-        err instanceof Error
-          ? err.message
-          : 'Could not submit your scores. Please try again.',
-      );
+      // submit_vote raises 'evaluation_frozen' when the creator has
+      // paused voting between page load and submit. Treat it like a
+      // fresh frozen-link load rather than an inline retryable error.
+      const raw =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : String(err);
+      if (raw.includes('evaluation_frozen')) {
+        setFrozen(true);
+        return;
+      }
+      setSubmitError(raw || 'Could not submit your scores. Please try again.');
       setSubmitting(false);
     }
   };
+
+  if (frozen) {
+    return <ErrorState variant="frozen" />;
+  }
 
   if (submitted) {
     return (
@@ -144,6 +160,12 @@ export function VoteForm({
           Score each participant on each category. 0 = lowest, 100 = highest.
         </p>
       </header>
+
+      {submitError && (
+        <div className={styles.errorBanner} role="alert">
+          {submitError}
+        </div>
+      )}
 
       <section className={styles.nameSection}>
         <label className={styles.label} htmlFor="voter-name">
@@ -172,10 +194,6 @@ export function VoteForm({
           />
         ))}
       </section>
-
-      {submitError && (
-        <div className={styles.errorBanner}>{submitError}</div>
-      )}
 
       <div className={styles.submitWrap}>
         <button

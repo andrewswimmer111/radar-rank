@@ -5,9 +5,11 @@ import {
   createShare,
   deleteShare,
   getShareForEvaluation,
+  setShareFrozenAt,
   type EvaluationShare,
 } from '../db/shares';
 import { getTemplate } from '../db/templates';
+import { now } from '../db/util';
 
 import { withViewToken } from './client';
 import { getOrCreateInstallId } from './installId';
@@ -116,14 +118,69 @@ export async function pushEvaluation(
   });
 }
 
-// Mirror of pushEvaluation. Deletes the cloud parent (cascade wipes children
-// + submissions + scores), then drops the local share row (cascade wipes
-// local vote cache via the FK chain set up in plan-2's v2 migration).
+// Pause voting without tearing anything down. The cloud row is updated
+// in place — voters with the link see a "voting paused" state and any
+// in-flight submit_vote calls are rejected. Local vote cache is
+// untouched, so the consensus tab keeps showing the same numbers it
+// did the moment we froze. Cloud-side failure is fatal; we don't want
+// the local row to claim frozen while the cloud is still accepting.
 //
-// Cloud-side failure is fatal — we don't want to delete local state while
-// the cloud row still exists and could be polled / voted on. A no-op
-// (no local share) is silently fine.
-export async function unshareEvaluation(evaluationId: string): Promise<void> {
+// UPDATE on shared_evaluations is gated by the "update by view_token"
+// RLS policy + a SELECT round-trip via .select() so a silent miss
+// (no-op UPDATE that affected 0 rows because RLS blocked it) surfaces
+// as a real error instead of leaving cloud + local out of sync.
+export async function freezeEvaluation(evaluationId: string): Promise<void> {
+  const share = await getShareForEvaluation(evaluationId);
+  if (!share) return;
+  if (share.frozenAt !== null) return;
+
+  const ts = now();
+  const supabase = withViewToken(share.viewToken);
+  const { data, error } = await supabase
+    .from('shared_evaluations')
+    .update({ frozen_at: new Date(ts).toISOString() })
+    .eq('id', share.cloudId)
+    .select('id');
+  if (error) throw new Error(`Cloud freeze failed: ${error.message}`);
+  if (!data || data.length === 0) {
+    throw new Error(
+      'Cloud freeze affected no rows — RLS denied the update or the cloud row was deleted.',
+    );
+  }
+
+  await setShareFrozenAt(evaluationId, ts);
+}
+
+// Reverse of freezeEvaluation — same tokens, same cloud_id, voters with
+// the original link can submit again. No-op if the share isn't frozen.
+export async function resumeEvaluation(evaluationId: string): Promise<void> {
+  const share = await getShareForEvaluation(evaluationId);
+  if (!share) return;
+  if (share.frozenAt === null) return;
+
+  const supabase = withViewToken(share.viewToken);
+  const { data, error } = await supabase
+    .from('shared_evaluations')
+    .update({ frozen_at: null })
+    .eq('id', share.cloudId)
+    .select('id');
+  if (error) throw new Error(`Cloud resume failed: ${error.message}`);
+  if (!data || data.length === 0) {
+    throw new Error(
+      'Cloud resume affected no rows — RLS denied the update or the cloud row was deleted.',
+    );
+  }
+
+  await setShareFrozenAt(evaluationId, null);
+}
+
+// Hard-delete the cloud row and local share state. Used by
+// deleteEvaluation — the user is throwing the evaluation away entirely,
+// so the freeze semantics don't apply. Cloud-side cascade wipes
+// participants, categories, submissions, and scores; local FK cascade
+// then takes care of vote_submissions + vote_scores when the share row
+// is deleted.
+export async function purgeShare(evaluationId: string): Promise<void> {
   const share = await getShareForEvaluation(evaluationId);
   if (!share) return;
 

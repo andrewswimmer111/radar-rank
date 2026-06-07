@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   Share,
   StyleSheet,
@@ -15,7 +16,14 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AddItemRow } from '@/components/AddItemRow';
@@ -98,6 +106,23 @@ export default function EvaluationDetail() {
     if (!isActive) return;
     refreshSubmissions(id).catch(() => {});
   }, [id, share?.cloudId, isActive]);
+
+  // Pull-to-refresh: re-pulls cached submissions on demand. Only meaningful
+  // while sharing is active; on unshared/frozen evaluations the gesture
+  // still flashes a spinner so the affordance feels alive, but there's
+  // nothing to fetch.
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    try {
+      if (isActive) await refreshSubmissions(id);
+    } catch {
+      // Non-fatal: spinner just dismisses.
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const { data: sourceCollection } = useCollection(
     evaluation?.originCollectionId ?? '',
   );
@@ -461,7 +486,14 @@ export default function EvaluationDetail() {
             },
           ]}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.textDim}
+            />
+          }>
           <Text style={styles.eyebrow}>Title</Text>
           <TextInput
             style={styles.titleInput}
@@ -749,6 +781,12 @@ const ParticipantRow = memo(function ParticipantRow({
   );
 });
 
+// 4px padding around the bar + 4px gap between tabs — kept in sync with
+// the tabBar style below so the sliding indicator lands exactly where a
+// statically-active tab would render.
+const TAB_BAR_PADDING = 4;
+const TAB_GAP = 4;
+
 function TabSwitch({
   tab,
   onChange,
@@ -759,10 +797,39 @@ function TabSwitch({
   voteCount: number;
 }) {
   const styles = useThemedStyles(makeStyles);
+  const [barWidth, setBarWidth] = useState(0);
+  const progress = useSharedValue(tab === 'yours' ? 0 : 1);
+  useEffect(() => {
+    progress.value = withTiming(tab === 'yours' ? 0 : 1, {
+      duration: 240,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [tab, progress]);
+
+  const innerWidth = Math.max(0, barWidth - TAB_BAR_PADDING * 2);
+  const itemWidth = innerWidth > 0 ? (innerWidth - TAB_GAP) / 2 : 0;
+
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: progress.value * (itemWidth + TAB_GAP) }],
+  }));
+
   const labelFor = (t: 'yours' | 'consensus') =>
     t === 'yours' ? 'Yours' : `Consensus · ${voteCount}`;
   return (
-    <View style={styles.tabBar} accessibilityRole="tablist">
+    <View
+      style={styles.tabBar}
+      onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
+      accessibilityRole="tablist">
+      {itemWidth > 0 && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.tabIndicator,
+            { width: itemWidth },
+            indicatorStyle,
+          ]}
+        />
+      )}
       {(['yours', 'consensus'] as const).map((t) => {
         const active = tab === t;
         return (
@@ -779,7 +846,6 @@ function TabSwitch({
             accessibilityLabel={labelFor(t)}
             style={({ pressed: p }) => [
               styles.tabBtn,
-              active && styles.tabBtnActive,
               p && !active && pressed.default,
             ]}>
             <Text
@@ -944,6 +1010,15 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: t.colors.border,
     gap: 4,
+    position: 'relative',
+  },
+  tabIndicator: {
+    position: 'absolute',
+    top: 4,
+    bottom: 4,
+    left: 4,
+    borderRadius: radii.pill,
+    backgroundColor: t.colors.accent,
   },
   tabBtn: {
     flex: 1,
@@ -952,7 +1027,6 @@ const makeStyles = (t: Theme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tabBtnActive: { backgroundColor: t.colors.accent },
   tabBtnText: { ...type.label, color: t.colors.textDim },
   tabBtnTextActive: { color: t.colors.onAccent },
   votersLink: {

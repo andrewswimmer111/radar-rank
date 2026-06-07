@@ -12,13 +12,26 @@ import { useStarterPrefs } from '@/lib/starterPrefs';
 // persists via shared prefs; delete is delegated to the caller. Omit
 // onDelete to render a pin-only row (used for starters, which can't be
 // deleted).
+//
+// `leftAction` swaps the right-swipe affordance away from pin for callers
+// where pinning makes no sense (e.g. voter rows on the voters list).
+// Caller controls the label, press handler, and whether to render at all
+// by omitting the prop.
+export type SwipeRowAction = {
+  label: string;
+  onPress: () => void;
+  accessibilityLabel?: string;
+};
+
 export function SwipeRow({
   id,
   onDelete,
+  leftAction,
   children,
 }: {
   id: string;
   onDelete?: () => void;
+  leftAction?: SwipeRowAction;
   children: ReactNode;
 }) {
   const styles = useThemedStyles(makeStyles);
@@ -30,6 +43,13 @@ export function SwipeRow({
     Haptics.selectionAsync().catch(() => {});
     togglePinned(id);
     ref.current?.close();
+  };
+
+  const onLeftActionPress = () => {
+    if (!leftAction) return;
+    Haptics.selectionAsync().catch(() => {});
+    ref.current?.close();
+    leftAction.onPress();
   };
 
   const onDeletePress = () => {
@@ -51,13 +71,25 @@ export function SwipeRow({
       rightThreshold={onDelete ? 48 : 9999}
       renderLeftActions={() => (
         <View style={styles.leftWrap}>
-          <Pressable
-            onPress={onPin}
-            accessibilityRole="button"
-            accessibilityLabel={isPinned ? 'Unpin' : 'Pin'}
-            style={({ pressed: p }) => [styles.pinPanel, p && pressed.soft]}>
-            <Text style={styles.pinText}>{isPinned ? 'Unpin' : 'Pin'}</Text>
-          </Pressable>
+          {leftAction ? (
+            <Pressable
+              onPress={onLeftActionPress}
+              accessibilityRole="button"
+              accessibilityLabel={
+                leftAction.accessibilityLabel ?? leftAction.label
+              }
+              style={({ pressed: p }) => [styles.pinPanel, p && pressed.soft]}>
+              <Text style={styles.pinText}>{leftAction.label}</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={onPin}
+              accessibilityRole="button"
+              accessibilityLabel={isPinned ? 'Unpin' : 'Pin'}
+              style={({ pressed: p }) => [styles.pinPanel, p && pressed.soft]}>
+              <Text style={styles.pinText}>{isPinned ? 'Unpin' : 'Pin'}</Text>
+            </Pressable>
+          )}
         </View>
       )}
       renderRightActions={

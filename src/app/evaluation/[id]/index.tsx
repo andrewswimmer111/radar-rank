@@ -489,6 +489,20 @@ export default function EvaluationDetail() {
             />
           )}
 
+          {hasVotes && !selectMode && tab === 'consensus' && (
+            <Pressable
+              onPress={() => router.push(`/evaluation/${id}/voters`)}
+              accessibilityRole="button"
+              accessibilityLabel="View voters and their score breakdowns"
+              style={({ pressed: p }) => [
+                styles.votersLink,
+                p && pressed.soft,
+              ]}>
+              <Text style={styles.votersLinkText}>View voters</Text>
+              <Text style={styles.votersLinkChevron}>›</Text>
+            </Pressable>
+          )}
+
           {!selectMode && (
             <EvaluationSummary
               evaluationId={id}
@@ -941,6 +955,20 @@ const makeStyles = (t: Theme) => StyleSheet.create({
   tabBtnActive: { backgroundColor: t.colors.accent },
   tabBtnText: { ...type.label, color: t.colors.textDim },
   tabBtnTextActive: { color: t.colors.onAccent },
+  votersLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.pill,
+    backgroundColor: t.colors.bgElev,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: t.colors.border,
+  },
+  votersLinkText: { ...type.label, color: t.colors.text },
+  votersLinkChevron: { ...type.h3, color: t.colors.textMute },
   colorChip: {
     width: 40,
     height: 40,

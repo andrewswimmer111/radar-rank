@@ -174,6 +174,58 @@ export async function resumeEvaluation(evaluationId: string): Promise<void> {
   await setShareFrozenAt(evaluationId, null);
 }
 
+// Owner deletes a single voter's submission. Cloud-side first (vote_scores
+// cascade on submission delete), then a pull so the local cache matches.
+// Throws on RLS denial or missing share.
+export async function deleteSubmission(
+  evaluationId: string,
+  submissionId: string,
+): Promise<void> {
+  const share = await getShareForEvaluation(evaluationId);
+  if (!share) throw new Error('Evaluation is not shared');
+
+  const supabase = withViewToken(share.viewToken);
+  const { data, error } = await supabase
+    .from('vote_submissions')
+    .delete()
+    .eq('id', submissionId)
+    .select('id');
+  if (error) throw new Error(`Cloud delete failed: ${error.message}`);
+  if (!data || data.length === 0) {
+    throw new Error(
+      'Cloud delete affected no rows — RLS denied the update or the submission no longer exists.',
+    );
+  }
+}
+
+// Owner renames a voter on an existing submission. Trimmed name is
+// required; an empty string is rejected before the cloud round-trip so we
+// don't leak validation through PostgREST errors.
+export async function renameSubmission(
+  evaluationId: string,
+  submissionId: string,
+  voterName: string,
+): Promise<void> {
+  const trimmed = voterName.trim();
+  if (!trimmed) throw new Error('Voter name is required');
+
+  const share = await getShareForEvaluation(evaluationId);
+  if (!share) throw new Error('Evaluation is not shared');
+
+  const supabase = withViewToken(share.viewToken);
+  const { data, error } = await supabase
+    .from('vote_submissions')
+    .update({ voter_name: trimmed })
+    .eq('id', submissionId)
+    .select('id');
+  if (error) throw new Error(`Cloud rename failed: ${error.message}`);
+  if (!data || data.length === 0) {
+    throw new Error(
+      'Cloud rename affected no rows — RLS denied the update or the submission no longer exists.',
+    );
+  }
+}
+
 // Hard-delete the cloud row and local share state. Used by
 // deleteEvaluation — the user is throwing the evaluation away entirely,
 // so the freeze semantics don't apply. Cloud-side cascade wipes

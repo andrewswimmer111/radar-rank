@@ -474,6 +474,28 @@ export async function refreshSubmissions(evaluationId: string) {
   publish(T.voteSubmissions(evaluationId), T.share(evaluationId));
 }
 
+// Owner-side cleanup: delete a single voter's submission. Cloud is the
+// source of truth, so the local cache is reconciled via a follow-up pull
+// rather than a local DELETE — matches the rest of the vote sync flow.
+export async function deleteVoteSubmission(
+  evaluationId: string,
+  submissionId: string,
+) {
+  await cloudPush.deleteSubmission(evaluationId, submissionId);
+  await cloudPull.pullSubmissionsForEvaluation(evaluationId);
+  publish(T.voteSubmissions(evaluationId), T.share(evaluationId));
+}
+
+export async function renameVoteSubmission(
+  evaluationId: string,
+  submissionId: string,
+  voterName: string,
+) {
+  await cloudPush.renameSubmission(evaluationId, submissionId, voterName);
+  await cloudPull.pullSubmissionsForEvaluation(evaluationId);
+  publish(T.voteSubmissions(evaluationId), T.share(evaluationId));
+}
+
 // Wipes all user-owned data in one transaction. Cascades clear people,
 // participants, categories, and scores; built-in templates are preserved
 // (every install seeds the same stable-id set). Theme and other prefs in

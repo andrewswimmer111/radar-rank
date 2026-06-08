@@ -1,4 +1,5 @@
-import { type ReactNode } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -39,14 +40,32 @@ export function TabContent({
 }) {
   const insets = useSafeAreaInsets();
   const styles = useThemedStyles(makeStyles);
+  // Bump a key on every focus *after* the initial mount so the rows'
+  // FadeInDown entering animations replay each time the user comes back
+  // to this tab. Skipping the first focus avoids a double-mount glitch
+  // where the initial render would animate, get unmounted, and animate
+  // again.
+  const [focusKey, setFocusKey] = useState(0);
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      setFocusKey((k) => k + 1);
+    }, []),
+  );
   return (
     <ScrollView
       contentContainerStyle={[
         styles.list,
-        { gap, paddingBottom: insets.bottom + spacing.xxxl },
+        { paddingBottom: insets.bottom + spacing.xxxl },
       ]}
       showsVerticalScrollIndicator={false}>
-      {children}
+      <View key={focusKey} style={{ gap }}>
+        {children}
+      </View>
     </ScrollView>
   );
 }

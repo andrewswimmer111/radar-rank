@@ -537,6 +537,11 @@ export default function EvaluationDetail() {
 
           {!selectMode && (
             <EvaluationSummary
+              // Re-key on tab so the summary remounts and replays its
+              // entering animation each time the user switches between
+              // Yours and Consensus — otherwise the FadeIn only runs the
+              // first time this tab is visited.
+              key={`summary-${tab}`}
               evaluationId={id}
               participants={participantList}
               categories={categories ?? []}
@@ -798,19 +803,26 @@ function TabSwitch({
 }) {
   const styles = useThemedStyles(makeStyles);
   const [barWidth, setBarWidth] = useState(0);
-  const progress = useSharedValue(tab === 'yours' ? 0 : 1);
-  useEffect(() => {
-    progress.value = withTiming(tab === 'yours' ? 0 : 1, {
-      duration: 240,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [tab, progress]);
-
   const innerWidth = Math.max(0, barWidth - TAB_BAR_PADDING * 2);
   const itemWidth = innerWidth > 0 ? (innerWidth - TAB_GAP) / 2 : 0;
 
+  // Drive translateX directly as a shared value rather than animating a
+  // 0..1 progress and multiplying by `itemWidth` inside the worklet —
+  // closing over a JS number in useAnimatedStyle makes subsequent tab
+  // switches snap instead of animate. Doing the math in the JS effect
+  // keeps the worklet's only dependency the shared value itself.
+  const translateX = useSharedValue(0);
+  useEffect(() => {
+    if (itemWidth === 0) return;
+    const target = tab === 'yours' ? 0 : itemWidth + TAB_GAP;
+    translateX.value = withTiming(target, {
+      duration: 240,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [tab, itemWidth, translateX]);
+
   const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: progress.value * (itemWidth + TAB_GAP) }],
+    transform: [{ translateX: translateX.value }],
   }));
 
   const labelFor = (t: 'yours' | 'consensus') =>

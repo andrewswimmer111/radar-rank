@@ -1,7 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -63,6 +63,7 @@ import {
   spreadByParticipant,
   type SortMode,
 } from '@/lib/stats';
+import { useDraftField } from '@/lib/useDraftField';
 
 // Vote-link host, set per build via env. Empty in dev/clones without a
 // configured .env — sharing is guarded at the call sites below so the
@@ -130,39 +131,11 @@ export default function EvaluationDetail() {
     evaluation?.originTemplateId ?? '',
   );
 
-  const [titleDraft, setTitleDraft] = useState('');
-  useEffect(() => {
-    if (evaluation) setTitleDraft(evaluation.title);
-  }, [evaluation?.id, evaluation?.title]);
-
-  // Mirror the latest draft / saved title / id into refs so the unmount
-  // cleanup below can commit a pending edit without subscribing to those
-  // values and re-running on every keystroke.
-  const titleDraftRef = useRef(titleDraft);
-  const savedTitleRef = useRef(evaluation?.title ?? '');
-  const idRef = useRef(id);
-  useEffect(() => {
-    titleDraftRef.current = titleDraft;
-  }, [titleDraft]);
-  useEffect(() => {
-    savedTitleRef.current = evaluation?.title ?? '';
-  }, [evaluation?.title]);
-  useEffect(() => {
-    idRef.current = id;
-  }, [id]);
-
-  // Commit a pending title edit on unmount — covers back button, swipe-
-  // back gesture, hardware back, and any other pop path. Fire-and-forget;
-  // the DB write doesn't need the component to stay mounted.
-  useEffect(() => {
-    return () => {
-      const draft = titleDraftRef.current.trim();
-      const saved = savedTitleRef.current;
-      if (draft && draft !== saved) {
-        void updateEvaluation(idRef.current, { title: draft });
-      }
-    };
-  }, []);
+  const title = useDraftField(
+    evaluation?.title,
+    (next) => updateEvaluation(id, { title: next }),
+    { commitOnUnmount: true },
+  );
 
   const [newParticipantName, setNewParticipantName] = useState('');
 
@@ -285,16 +258,6 @@ export default function EvaluationDetail() {
       </SafeAreaView>
     );
   }
-
-  const onTitleCommit = async () => {
-    const trimmed = titleDraft.trim();
-    if (!trimmed) {
-      setTitleDraft(evaluation.title);
-      return;
-    }
-    if (trimmed === evaluation.title) return;
-    await updateEvaluation(id, { title: trimmed });
-  };
 
   const onAddParticipant = async () => {
     const trimmed = newParticipantName.trim();
@@ -497,14 +460,14 @@ export default function EvaluationDetail() {
           <Text style={styles.eyebrow}>Title</Text>
           <TextInput
             style={styles.titleInput}
-            value={titleDraft}
+            value={title.value}
             // Multiline so long titles like "Friends × Athleticism" wrap
             // to a second line instead of clipping off the right edge.
             // Strip newlines so the keyboard's return key can't slip a
             // hard break into the stored title.
-            onChangeText={(v) => setTitleDraft(v.replace(/\n/g, ''))}
-            onBlur={onTitleCommit}
-            onSubmitEditing={onTitleCommit}
+            onChangeText={(v) => title.setValue(v.replace(/\n/g, ''))}
+            onBlur={title.commit}
+            onSubmitEditing={title.commit}
             returnKeyType="done"
             maxLength={60}
             multiline

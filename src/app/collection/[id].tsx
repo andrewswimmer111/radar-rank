@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -31,6 +31,8 @@ import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
 import { pressed, radii, spacing, type } from '@/design/tokens';
 import { confirmDestructive } from '@/lib/dialog';
 import { pickPersonColor } from '@/lib/personColors';
+import { swapAdjacent } from '@/lib/reorder';
+import { useDraftField } from '@/lib/useDraftField';
 
 export default function CollectionEditor() {
   const insets = useSafeAreaInsets();
@@ -40,12 +42,11 @@ export default function CollectionEditor() {
   const { data: collection, loading } = useCollection(id);
   const { data: people } = usePeopleForCollection(id);
 
-  // Local draft of the name, synced with DB on collection load and
-  // committed back on blur / Done.
-  const [nameDraft, setNameDraft] = useState('');
-  useEffect(() => {
-    if (collection) setNameDraft(collection.name);
-  }, [collection?.id, collection?.name]);
+  const name = useDraftField(
+    collection?.name,
+    (next) => updateCollection(id, { name: next }),
+    { commitOnUnmount: true },
+  );
 
   const [newPersonName, setNewPersonName] = useState('');
 
@@ -73,16 +74,6 @@ export default function CollectionEditor() {
 
   const peopleList = people ?? [];
 
-  const onNameCommit = async () => {
-    const trimmed = nameDraft.trim();
-    if (!trimmed) {
-      setNameDraft(collection.name);
-      return;
-    }
-    if (trimmed === collection.name) return;
-    await updateCollection(id, { name: trimmed });
-  };
-
   const onAddPerson = async () => {
     const trimmed = newPersonName.trim();
     if (!trimmed) return;
@@ -95,16 +86,9 @@ export default function CollectionEditor() {
   };
 
   const onReorder = async (personId: string, direction: 'up' | 'down') => {
-    const idx = peopleList.findIndex((p) => p.id === personId);
-    if (idx < 0) return;
-    const swap = direction === 'up' ? idx - 1 : idx + 1;
-    if (swap < 0 || swap >= peopleList.length) return;
-    const ordered = [...peopleList];
-    [ordered[idx], ordered[swap]] = [ordered[swap], ordered[idx]];
-    await reorderPeople(
-      id,
-      ordered.map((p) => p.id),
-    );
+    const next = swapAdjacent(peopleList, personId, direction);
+    if (!next) return;
+    await reorderPeople(id, next);
   };
 
   const onDeleteCollection = () => {
@@ -150,10 +134,10 @@ export default function CollectionEditor() {
           <Text style={styles.eyebrow}>Name</Text>
           <TextInput
             style={styles.nameInput}
-            value={nameDraft}
-            onChangeText={setNameDraft}
-            onBlur={onNameCommit}
-            onSubmitEditing={onNameCommit}
+            value={name.value}
+            onChangeText={name.setValue}
+            onBlur={name.commit}
+            onSubmitEditing={name.commit}
             returnKeyType="done"
             maxLength={40}
             autoCorrect={false}
@@ -205,19 +189,12 @@ function PersonRow({
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(person.name);
-
-  useEffect(() => {
-    setDraft(person.name);
-  }, [person.name]);
+  const name = useDraftField(person.name, (next) =>
+    updatePerson(person.id, person.collectionId, { name: next }),
+  );
 
   const onSave = async () => {
-    const trimmed = draft.trim();
-    if (!trimmed) {
-      setDraft(person.name);
-    } else if (trimmed !== person.name) {
-      await updatePerson(person.id, person.collectionId, { name: trimmed });
-    }
+    await name.commit();
     setEditing(false);
   };
 
@@ -242,8 +219,8 @@ function PersonRow({
       {editing ? (
         <TextInput
           style={styles.personInput}
-          value={draft}
-          onChangeText={setDraft}
+          value={name.value}
+          onChangeText={name.setValue}
           autoFocus
           onSubmitEditing={onSave}
           onBlur={onSave}

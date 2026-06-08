@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -34,6 +34,8 @@ import { useTheme, useThemedStyles, type Theme } from '@/design/theme';
 import { pressed, radii, spacing, type } from '@/design/tokens';
 import { ACCENT_PRESETS, accentEquals } from '@/lib/accentPresets';
 import { confirmDestructive } from '@/lib/dialog';
+import { swapAdjacent } from '@/lib/reorder';
+import { useDraftField } from '@/lib/useDraftField';
 
 export default function TemplateEditor() {
   const insets = useSafeAreaInsets();
@@ -43,14 +45,16 @@ export default function TemplateEditor() {
   const { data: template, loading } = useTemplate(id);
   const { data: categories } = useTemplateCategories(id);
 
-  const [nameDraft, setNameDraft] = useState('');
-  const [blurbDraft, setBlurbDraft] = useState('');
-  useEffect(() => {
-    if (template) {
-      setNameDraft(template.name);
-      setBlurbDraft(template.blurb);
-    }
-  }, [template?.id, template?.name, template?.blurb]);
+  const name = useDraftField(
+    template?.name,
+    (next) => updateTemplate(id, { name: next }),
+    { commitOnUnmount: true },
+  );
+  const blurb = useDraftField(
+    template?.blurb,
+    (next) => updateTemplate(id, { blurb: next }),
+    { commitOnUnmount: true, allowEmpty: true },
+  );
 
   const [newCategoryLabel, setNewCategoryLabel] = useState('');
 
@@ -96,21 +100,6 @@ export default function TemplateEditor() {
 
   const cats = categories ?? [];
 
-  const onNameCommit = async () => {
-    const trimmed = nameDraft.trim();
-    if (!trimmed) {
-      setNameDraft(template.name);
-      return;
-    }
-    if (trimmed === template.name) return;
-    await updateTemplate(id, { name: trimmed });
-  };
-
-  const onBlurbCommit = async () => {
-    if (blurbDraft === template.blurb) return;
-    await updateTemplate(id, { blurb: blurbDraft });
-  };
-
   const onAccentPick = async (accent: TemplateAccent) => {
     if (accentEquals(accent, template.accent)) return;
     await updateTemplate(id, { accent });
@@ -134,16 +123,9 @@ export default function TemplateEditor() {
     categoryId: string,
     direction: 'up' | 'down',
   ) => {
-    const idx = cats.findIndex((c) => c.id === categoryId);
-    if (idx < 0) return;
-    const swap = direction === 'up' ? idx - 1 : idx + 1;
-    if (swap < 0 || swap >= cats.length) return;
-    const ordered = [...cats];
-    [ordered[idx], ordered[swap]] = [ordered[swap], ordered[idx]];
-    await reorderTemplateCategories(
-      id,
-      ordered.map((c) => c.id),
-    );
+    const next = swapAdjacent(cats, categoryId, direction);
+    if (!next) return;
+    await reorderTemplateCategories(id, next);
   };
 
   const onDeleteTemplate = () => {
@@ -187,17 +169,17 @@ export default function TemplateEditor() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <Preview
-            name={nameDraft || 'Untitled'}
+            name={name.value || 'Untitled'}
             accent={template.accent}
           />
 
           <Text style={styles.eyebrow}>Name</Text>
           <TextInput
             style={styles.input}
-            value={nameDraft}
-            onChangeText={setNameDraft}
-            onBlur={onNameCommit}
-            onSubmitEditing={onNameCommit}
+            value={name.value}
+            onChangeText={name.setValue}
+            onBlur={name.commit}
+            onSubmitEditing={name.commit}
             returnKeyType="done"
             maxLength={40}
             autoCorrect={false}
@@ -206,9 +188,9 @@ export default function TemplateEditor() {
           <Text style={styles.eyebrow}>Blurb</Text>
           <TextInput
             style={[styles.input, styles.blurbInput]}
-            value={blurbDraft}
-            onChangeText={setBlurbDraft}
-            onBlur={onBlurbCommit}
+            value={blurb.value}
+            onChangeText={blurb.setValue}
+            onBlur={blurb.commit}
             placeholder="One-line description"
             placeholderTextColor={colors.textMute}
             multiline
@@ -318,21 +300,12 @@ function CategoryRow({
 }) {
   const styles = useThemedStyles(makeStyles);
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(category.label);
-
-  useEffect(() => {
-    setDraft(category.label);
-  }, [category.label]);
+  const label = useDraftField(category.label, (next) =>
+    updateTemplateCategory(category.id, category.templateId, { label: next }),
+  );
 
   const onSave = async () => {
-    const trimmed = draft.trim();
-    if (!trimmed) {
-      setDraft(category.label);
-    } else if (trimmed !== category.label) {
-      await updateTemplateCategory(category.id, category.templateId, {
-        label: trimmed,
-      });
-    }
+    await label.commit();
     setEditing(false);
   };
 
@@ -349,8 +322,8 @@ function CategoryRow({
       {editing ? (
         <TextInput
           style={styles.catInput}
-          value={draft}
-          onChangeText={setDraft}
+          value={label.value}
+          onChangeText={label.setValue}
           autoFocus
           onSubmitEditing={onSave}
           onBlur={onSave}

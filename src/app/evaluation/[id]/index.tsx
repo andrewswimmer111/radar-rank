@@ -139,11 +139,11 @@ export default function EvaluationDetail() {
 
   const [newParticipantName, setNewParticipantName] = useState('');
 
-  const [sortMode, setSortMode] = useState<SortMode>({ kind: 'manual' });
+  const [sortMode, setSortMode] = useState<SortMode>({ kind: 'ovrDesc' });
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   useEffect(() => {
-    setSortMode({ kind: 'manual' });
+    setSortMode({ kind: 'ovrDesc' });
     setSelectMode(false);
     setSelected(new Set());
   }, [id]);

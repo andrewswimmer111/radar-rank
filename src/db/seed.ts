@@ -134,15 +134,41 @@ async function syncBuiltinTemplates(): Promise<void> {
     }
   }
 
+  // Resync builtins on every launch: template metadata + full category
+  // list are overwritten from code. This is what lets an old install pick
+  // up label / accent / category changes without a schema migration.
+  // Preserves the template row itself (and thus origin_template_id
+  // lineage on any evaluation snapshotted from it).
   for (const tmpl of BUILTIN_TEMPLATES) {
-    if (existingIds.has(tmpl.id)) continue;
-    await createTemplate({
-      id: tmpl.id,
-      name: tmpl.name,
-      blurb: tmpl.blurb,
-      accent: tmpl.accent,
-      isBuiltin: true,
-    });
+    const ts = now();
+    if (existingIds.has(tmpl.id)) {
+      await db.runAsync(
+        `UPDATE templates
+           SET name = ?, blurb = ?, accent_start = ?, accent_end = ?,
+               accent_glow = ?, updated_at = ?
+         WHERE id = ?`,
+        [
+          tmpl.name,
+          tmpl.blurb,
+          tmpl.accent.start,
+          tmpl.accent.end,
+          tmpl.accent.glow,
+          ts,
+          tmpl.id,
+        ],
+      );
+      await db.runAsync('DELETE FROM template_categories WHERE template_id = ?', [
+        tmpl.id,
+      ]);
+    } else {
+      await createTemplate({
+        id: tmpl.id,
+        name: tmpl.name,
+        blurb: tmpl.blurb,
+        accent: tmpl.accent,
+        isBuiltin: true,
+      });
+    }
     for (let i = 0; i < tmpl.categories.length; i++) {
       const c = tmpl.categories[i];
       await createTemplateCategory({

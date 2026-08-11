@@ -49,31 +49,3 @@ src/
     tokens.ts               colors, spacing, type
     useAppFonts.ts          font loader
 ```
-
-## Adding a template
-
-Templates are pure data. Append a `Template` entry to `src/data/templates.ts`:
-
-```ts
-{
-  id: 'your-id',
-  label: 'Your Label',
-  blurb: 'short pitch',
-  emoji: '🧠',
-  accent: { start: '#hex', end: '#hex', glow: '#hex' },
-  categories: [
-    { key: 'category_key', label: 'Display Name' },
-    // 5–8 entries
-  ],
-}
-```
-
-## Export pipeline
-
-The result screen mounts a second, off-screen `<RadarCard>` at 1080-wide export resolution with a `canvasRef`. Save / Share call `snapshotCanvasToFile` (`src/lib/exportCard.ts`), which calls `canvas.makeImageSnapshotAsync()` and writes the PNG bytes to a cache file via `expo-file-system`. The cache URI is then handed to `expo-media-library` or `expo-sharing`.
-
-Story format (9:16) and square (1:1) share the same component — only the `height` prop changes.
-
-## Out of scope (sprint 1)
-
-No auth, no feed, no cloud, no per-user history. Templates are static. The radar card is the deliverable.

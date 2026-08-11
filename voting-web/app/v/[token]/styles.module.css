@@ -78,6 +78,16 @@
   color: var(--text-mute);
 }
 
+.input[aria-invalid='true'] {
+  border-color: #ff6b6b;
+}
+
+.fieldError {
+  margin: var(--space-sm) 0 0;
+  font-size: 13px;
+  color: #ff6b6b;
+}
+
 .participants {
   display: flex;
   flex-direction: column;

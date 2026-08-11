@@ -1,11 +1,24 @@
 'use client';
 
+import {
+  englishDataset,
+  englishRecommendedTransformers,
+  RegExpMatcher,
+} from 'obscenity';
 import { useEffect, useMemo, useState } from 'react';
 
 import { withVoteToken } from '@/lib/supabase';
 
 import { ErrorState } from './ErrorState';
 import styles from './styles.module.css';
+
+// Built once at module scope — the matcher pre-compiles a large regex set
+// from the english dataset + leetspeak transformers (1→i, 0→o, @→a,
+// repeated chars collapsed, etc.), so it should not be rebuilt per render.
+const profanityMatcher = new RegExpMatcher({
+  ...englishDataset.build(),
+  ...englishRecommendedTransformers,
+});
 
 // How often to recheck the cloud row for a fresh frozen_at while a
 // voter has the form open. 15s is a comfortable trade-off — quick
@@ -113,7 +126,14 @@ export function VoteForm({
     [evaluation.accent_start, evaluation.accent_end],
   );
 
-  const canSubmit = voterName.trim().length > 0 && !submitting;
+  const trimmedName = voterName.trim();
+  // Only run the matcher once the user has committed to a name — no red
+  // flash while they're mid-typing. Empty string skips the check.
+  const nameHasProfanity = useMemo(
+    () => trimmedName.length > 0 && profanityMatcher.hasMatch(trimmedName),
+    [trimmedName],
+  );
+  const canSubmit = trimmedName.length > 0 && !nameHasProfanity && !submitting;
 
   const onChangeScore = (
     participantId: string,
@@ -219,7 +239,13 @@ export function VoteForm({
           autoComplete="off"
           autoCapitalize="words"
           placeholder="So the creator knows who voted"
+          aria-invalid={nameHasProfanity || undefined}
         />
+        {nameHasProfanity && (
+          <p className={styles.fieldError} role="alert">
+            Please pick a different name.
+          </p>
+        )}
       </section>
 
       <section className={styles.participants}>

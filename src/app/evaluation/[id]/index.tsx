@@ -385,12 +385,7 @@ export default function EvaluationDetail() {
     } else {
       actions = [{ label: 'Share evaluation', onPress: onShare }];
     }
-    // Starters are read-only: they never expose pause/delete. Filter both
-    // out after building the list above so the share/frozen branches stay
-    // straightforward to read.
-    if (isStarter) {
-      actions = actions.filter((a) => a.label !== 'Pause voting');
-    } else {
+    if (!isStarter) {
       actions.push(deleteAction);
     }
     showActionSheet({
@@ -421,7 +416,7 @@ export default function EvaluationDetail() {
               ]}>
               <Text style={styles.headerPillText}>Cancel</Text>
             </Pressable>
-          ) : (
+          ) : isStarter ? null : (
             <Pressable
               onPress={onOpenMenu}
               hitSlop={10}

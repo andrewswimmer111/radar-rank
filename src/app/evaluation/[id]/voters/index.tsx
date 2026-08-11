@@ -64,6 +64,10 @@ export default function VotersListScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
+  // Starters have seeded voter data but no real cloud share behind them,
+  // so rename / delete would hit Supabase with sentinel tokens and fail.
+  // Render the list as read-only when we're looking at one.
+  const isStarter = id.startsWith('builtin-');
 
   const { data: evaluation, loading } = useEvaluation(id);
   const { data: submissions } = useVoteSubmissions(id);
@@ -143,8 +147,9 @@ export default function VotersListScreen() {
             {list.length} {list.length === 1 ? 'voter' : 'voters'}
           </Text>
           <Text style={styles.subhead}>
-            Swipe a row to rename or delete. Tap to see their full breakdown
-            against the group.
+            {isStarter
+              ? 'Tap a voter to see their full breakdown against the group.'
+              : 'Swipe a row to rename or delete. Tap to see their full breakdown against the group.'}
           </Text>
 
           <View style={styles.list}>
@@ -175,6 +180,7 @@ export default function VotersListScreen() {
                   activeParticipantIds,
                 )}
                 hasCategories={(categories ?? []).length > 0}
+                readOnly={isStarter}
               />
             ))}
             {list.length === 0 && (
@@ -201,6 +207,7 @@ function VoterRow({
   onDelete,
   deviation,
   hasCategories,
+  readOnly,
 }: {
   evaluationId: string;
   submission: VoteSubmission;
@@ -211,6 +218,7 @@ function VoterRow({
   onDelete: () => void;
   deviation: number | null;
   hasCategories: boolean;
+  readOnly?: boolean;
 }) {
   const styles = useThemedStyles(makeStyles);
   const [draft, setDraft] = useState(submission.voterName);
@@ -229,16 +237,21 @@ function VoterRow({
   return (
     <SwipeRow
       id={submission.id}
-      onDelete={onDelete}
-      leftAction={{
-        label: 'Rename',
-        onPress: () => {
-          setDraft(submission.voterName);
-          onStartRename();
-          // The TextInput is mounted after this render; defer focus.
-          requestAnimationFrame(() => inputRef.current?.focus());
-        },
-      }}>
+      onDelete={readOnly ? undefined : onDelete}
+      leftAction={
+        readOnly
+          ? undefined
+          : {
+              label: 'Rename',
+              onPress: () => {
+                setDraft(submission.voterName);
+                onStartRename();
+                // The TextInput is mounted after this render; defer focus.
+                requestAnimationFrame(() => inputRef.current?.focus());
+              },
+            }
+      }>
+
       <Pressable
         onPress={onPress}
         disabled={renaming}
